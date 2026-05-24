@@ -415,6 +415,46 @@ document.addEventListener('keydown', function(event) {
     if (event.key === 'Escape') closeAlert();
 });
 
+
+const KUPON_LAYOUT_KEY = 'qurbanKuponLayout';
+const kuponLayoutFields = ['kuponKolom', 'kuponBaris', 'kuponMargin', 'kuponGap', 'tahunHijriah', 'kuponFontSize'];
+
+function loadKuponLayout() {
+    const saved = localStorage.getItem(KUPON_LAYOUT_KEY);
+    if (!saved) return;
+
+    try {
+        const parsed = JSON.parse(saved);
+        kuponLayoutFields.forEach((id) => {
+            const el = document.getElementById(id);
+            if (!el) return;
+            const value = parsed[id];
+            if (value === undefined || value === null || value === '') return;
+            el.value = String(value);
+        });
+    } catch (err) {
+        localStorage.removeItem(KUPON_LAYOUT_KEY);
+    }
+}
+
+function saveKuponLayout() {
+    const payload = {};
+    kuponLayoutFields.forEach((id) => {
+        const el = document.getElementById(id);
+        if (el) payload[id] = el.value;
+    });
+    localStorage.setItem(KUPON_LAYOUT_KEY, JSON.stringify(payload));
+}
+
+function bindKuponLayoutListeners() {
+    kuponLayoutFields.forEach((id) => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.addEventListener('input', saveKuponLayout);
+        el.addEventListener('change', saveKuponLayout);
+    });
+}
+
 function buildWargaKey(nama, rt) {
     const namaNorm = String(nama || '').trim().toLowerCase().replace(/\s+/g, ' ');
     const rtNorm = String(rt || '').trim().toLowerCase();
@@ -927,6 +967,8 @@ function applyImportedWarga(importedRows) {
     );
 }
 
+loadKuponLayout();
+bindKuponLayoutListeners();
 loadData();
 </script>
 
