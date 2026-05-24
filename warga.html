@@ -1,0 +1,934 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Data Penerima & Kupon Qurban AL-HIKMAH</title>
+<script src="assets/xlsx.full.min.js"></script>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+
+body {
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  background: linear-gradient(135deg, #0f0f1a 0%, #1a1a2e 50%, #16213e 100%);
+  color: #e0e0e0;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  padding: 12px;
+  gap: 15px;
+}
+
+header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 15px 25px;
+  border-radius: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 4px 20px rgba(102, 126, 234, 0.3);
+}
+
+header h1 { font-size: 1.4em; color: white; font-weight: 700; letter-spacing: 0.5px; }
+
+.container {
+  display: grid;
+  grid-template-columns: 350px 1fr;
+  gap: 15px;
+  flex: 1;
+}
+
+.panel {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 12px;
+  padding: 15px;
+  backdrop-filter: blur(15px);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+  display: flex;
+  flex-direction: column;
+}
+
+.panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+
+.panel-header h2 { font-size: 0.9em; color: #a78bfa; text-transform: uppercase; letter-spacing: 1.5px; }
+
+/* Form Styles */
+.form-group { margin-bottom: 12px; }
+.form-group label { display: block; font-size: 0.8em; color: #888; margin-bottom: 5px; }
+input[type="text"], input[type="number"], select {
+  width: 100%;
+  background: rgba(0,0,0,0.3);
+  border: 1px solid rgba(255,255,255,0.15);
+  color: #e0e0e0;
+  padding: 10px;
+  border-radius: 8px;
+  font-size: 0.9em;
+  transition: all 0.3s;
+}
+input:focus { outline: none; border-color: #667eea; box-shadow: 0 0 8px rgba(102,126,234,0.4); }
+
+.btn {
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: white;
+  border: none;
+  padding: 10px 15px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.9em;
+  font-weight: 600;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.btn:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4); }
+.btn-outline { background: transparent; border: 1px solid #667eea; color: #667eea; }
+.btn-danger { background: linear-gradient(135deg, #ef4444, #dc2626); }
+
+/* Table Styles */
+.table-container { flex: 1; overflow-y: auto; max-height: 500px; }
+table { width: 100%; border-collapse: collapse; }
+th { position: sticky; top: 0; background: #1a1a2e; color: #a78bfa; padding: 12px; text-align: left; font-size: 0.85em; z-index: 10; }
+td { padding: 10px 12px; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 0.9em; }
+tr:hover td { background: rgba(255,255,255,0.03); }
+
+.badge-rt {
+  background: rgba(102, 126, 234, 0.2);
+  color: #60a5fa;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.8em;
+  font-weight: bold;
+}
+
+/* Stats */
+.stats-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 10px; margin-top: 15px; }
+.stat-card { background: rgba(0,0,0,0.2); padding: 10px; border-radius: 8px; text-align: center; border: 1px solid rgba(255,255,255,0.05); }
+.stat-card .val { display: block; font-size: 1.2em; font-weight: 700; color: #34d399; }
+.stat-card .lbl { font-size: 0.7em; color: #888; text-transform: uppercase; }
+
+/* Print Styles */
+@media print {
+  body * { visibility: hidden; }
+  #printArea, #printArea * { visibility: visible; }
+  #printArea { position: absolute; left: 0; top: 0; width: 100%; background: white !important; color: black !important; padding: 0 !important; }
+  .no-print { display: none !important; }
+  .coupon { border: 2px solid #000 !important; }
+  table.print-table { width: 100%; border-collapse: collapse; margin-top: 20px; table-layout: fixed; }
+  table.print-table th, table.print-table td { 
+    border: 0.7pt solid #222 !important; 
+    padding: 5px 7px; 
+    color: #000 !important; 
+    font-size: 9.5pt !important;
+  }
+  table.print-table th { 
+    background: #f5f5f5 !important; 
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+    white-space: normal !important;
+    font-weight: 600 !important;
+  }
+  table.print-table td {
+    white-space: nowrap !important;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  @page {
+    size: A4;
+  }
+}
+
+#printArea { display: none; }
+.coupon-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 10px; }
+.coupon {
+  border: 1.5px dashed #333;
+  padding: 8px;
+  border-radius: 6px;
+  position: relative;
+  background: white;
+  color: black;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+.coupon-header { border-bottom: 1px solid #eee; padding-bottom: 3px; margin-bottom: 5px; display: flex; justify-content: space-between; align-items: center; }
+.coupon-title { font-size: 9px; font-weight: bold; }
+.coupon-no { font-size: 11px; font-weight: 900; background: #eee; padding: 1px 5px; border-radius: 3px; }
+.coupon-body { flex: 1; display: flex; flex-direction: column; justify-content: center; }
+.coupon-name { font-size: 13px; font-weight: bold; margin-bottom: 2px; line-height: 1.1; }
+.coupon-address { font-size: 9px; color: #555; }
+.coupon-footer { font-size: 7px; color: #888; border-top: 1px dotted #ccc; padding-top: 3px; margin-top: 5px; display: flex; justify-content: space-between; }
+.watermark { position: absolute; right: 5px; bottom: 15px; font-size: 25px; opacity: 0.08; transform: rotate(-20deg); font-weight: bold; pointer-events: none; }
+
+/* Custom Alert */
+.custom-alert-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(8, 10, 20, 0.65);
+  backdrop-filter: blur(4px);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 16px;
+}
+
+.custom-alert-overlay.show {
+  display: flex;
+  animation: fadeIn 0.2s ease;
+}
+
+.custom-alert-box {
+  width: min(620px, 96vw);
+  max-height: 85vh;
+  overflow: auto;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: linear-gradient(160deg, rgba(21, 27, 52, 0.96), rgba(35, 20, 56, 0.96));
+  box-shadow: 0 20px 60px rgba(0,0,0,0.45);
+  color: #e5e7eb;
+  animation: zoomIn 0.2s ease;
+}
+
+.custom-alert-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 16px;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+
+.custom-alert-title {
+  font-size: 0.95em;
+  font-weight: 700;
+  color: #c4b5fd;
+}
+
+.custom-alert-close {
+  border: 0;
+  background: rgba(255,255,255,0.08);
+  color: #d1d5db;
+  border-radius: 8px;
+  width: 30px;
+  height: 30px;
+  cursor: pointer;
+  font-size: 16px;
+}
+
+.custom-alert-body {
+  padding: 14px 16px 8px;
+  white-space: pre-line;
+  line-height: 1.55;
+  font-size: 0.92em;
+}
+
+.custom-alert-foot {
+  padding: 12px 16px 16px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes zoomIn {
+  from { transform: scale(0.97); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+</style>
+</head>
+<body>
+
+<header>
+  <h1>👥 Penerima & Kupon Qurban</h1>
+  <div style="display:flex; gap:12px; align-items:center;">
+    <!-- Navigasi Utama -->
+    <button class="btn" onclick="location.href='qurban.html'" style="background:linear-gradient(135deg, #3b82f6, #2563eb); border:none; padding:8px 15px;">📊 Kalkulator Daging</button>
+    
+    <!-- Pemisah -->
+    <div style="width:1px; height:30px; background:rgba(255,255,255,0.15);"></div>
+    
+    <!-- Grup Backup -->
+    <div style="display:flex; gap:6px;">
+      <button class="btn btn-outline" onclick="exportData()" style="padding:6px 12px; font-size:0.8em; border-color:rgba(255,255,255,0.2); color:#aaa;" title="Backup Data ke File">💾 Export</button>
+      <button class="btn btn-outline" onclick="document.getElementById('importFile').click()" style="padding:6px 12px; font-size:0.8em; border-color:rgba(255,255,255,0.2); color:#aaa;" title="Import JSON / CSV / Excel">📥 Import</button>
+      <input type="file" id="importFile" style="display:none" accept=".json,.csv,.xls,.xlsx" onchange="importData(this)">
+    </div>
+
+    <!-- Pemisah -->
+    <div style="width:1px; height:30px; background:rgba(255,255,255,0.15);"></div>
+
+    <!-- Grup Cetak -->
+    <div style="display:flex; gap:10px;">
+      <button class="btn btn-outline" onclick="generateAttendanceList()" style="border-color:#34d399; color:#34d399; padding:8px 15px;">📋 Daftar Hadir</button>
+      <button class="btn" onclick="generateCoupons()" style="padding:8px 15px;">🎟️ Cetak Kupon</button>
+    </div>
+  </div>
+</header>
+
+<div class="container">
+  <!-- Kiri: Form Input -->
+  <div class="panel">
+    <div class="panel-header">
+      <h2>Tambah Penerima</h2>
+    </div>
+    <form id="wargaForm" onsubmit="event.preventDefault(); tambahWarga();">
+      <div class="form-group">
+        <label>Nama Lengkap</label>
+        <input type="text" id="nama" placeholder="Masukkan nama warga..." required autocomplete="off">
+      </div>
+      <div class="form-group">
+        <label>RT (Contoh: 01, 02...)</label>
+        <input type="text" id="rt" placeholder="RT" required>
+      </div>
+      <button type="submit" class="btn" style="width:100%; margin-top:10px;">Tambah Warga</button>
+    </form>
+
+    <div class="panel-header" style="margin-top:25px;">
+      <h2>Layout Cetak Kupon</h2>
+    </div>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+      <div class="form-group">
+        <label>Kolom</label>
+        <input type="number" id="kuponKolom" value="3" min="1" max="5">
+      </div>
+      <div class="form-group">
+        <label>Baris</label>
+        <input type="number" id="kuponBaris" value="6" min="1" max="10">
+      </div>
+      <div class="form-group">
+        <label>Margin (mm)</label>
+        <input type="number" id="kuponMargin" value="10" min="0" max="30">
+      </div>
+      <div class="form-group">
+        <label>Jarak (mm)</label>
+        <input type="number" id="kuponGap" value="2" min="0" max="10">
+      </div>
+      <div class="form-group">
+        <label>Tahun Hijriah</label>
+        <input type="text" id="tahunHijriah" value="1447" placeholder="Contoh: 1447">
+      </div>
+      <div class="form-group">
+        <label>Ukuran Teks (%)</label>
+        <input type="number" id="kuponFontSize" value="100" min="50" max="200">
+      </div>
+    </div>
+
+    <div class="panel-header" style="margin-top:25px;">
+      <h2>Statistik RT</h2>
+    </div>
+    <div class="stats-grid" id="statsContainer">
+      <!-- Stats per RT will be injected here -->
+    </div>
+  </div>
+
+  <!-- Kanan: Tabel Data -->
+  <div class="panel">
+    <div class="panel-header">
+      <div style="display:flex; flex-direction:column; gap:5px; width:100%;">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <h2>Daftar Penerima (<span id="totalWarga">0</span> Orang)</h2>
+          <button class="btn btn-danger" onclick="hapusSemua()" style="padding:5px 12px; font-size:0.75em;">Kosongkan Semua</button>
+        </div>
+        <input type="text" id="cariWarga" placeholder="🔍 Cari nama atau RT..." oninput="renderTable()" style="margin-top:10px; width:100%; background:rgba(255,255,255,0.1); border-color:rgba(255,255,255,0.2);">
+      </div>
+    </div>
+    <div class="table-container">
+      <table id="tabelWarga">
+        <thead>
+          <tr>
+            <th width="50">No</th>
+            <th>Nama Warga</th>
+            <th width="100">RT</th>
+            <th width="80">Aksi</th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- Data will be injected here -->
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Area Kupon (Hidden from screen, visible for print) -->
+<div id="printArea">
+  <div class="coupon-grid" id="couponContainer">
+    <!-- Coupons will be generated here -->
+  </div>
+</div>
+
+<div class="custom-alert-overlay" id="customAlertOverlay" onclick="handleAlertOverlayClick(event)">
+  <div class="custom-alert-box">
+    <div class="custom-alert-head">
+      <div class="custom-alert-title" id="customAlertTitle">Informasi</div>
+      <button type="button" class="custom-alert-close" onclick="closeAlert()">×</button>
+    </div>
+    <div class="custom-alert-body" id="customAlertMessage"></div>
+    <div class="custom-alert-foot">
+      <button type="button" class="btn" onclick="closeAlert()">OK</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let daftarWarga = [];
+let idCounter = 0;
+
+function generateUniqueId() {
+    idCounter += 1;
+    return `${Date.now()}-${idCounter}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function showAlert(message, title = 'Informasi') {
+    const overlay = document.getElementById('customAlertOverlay');
+    document.getElementById('customAlertTitle').textContent = title;
+    document.getElementById('customAlertMessage').textContent = message;
+    overlay.classList.add('show');
+}
+
+function closeAlert() {
+    document.getElementById('customAlertOverlay').classList.remove('show');
+}
+
+function handleAlertOverlayClick(event) {
+    if (event.target.id === 'customAlertOverlay') closeAlert();
+}
+
+document.addEventListener('keydown', function(event) {
+    if (event.key === 'Escape') closeAlert();
+});
+
+function buildWargaKey(nama, rt) {
+    const namaNorm = String(nama || '').trim().toLowerCase().replace(/\s+/g, ' ');
+    const rtNorm = String(rt || '').trim().toLowerCase();
+    return `${namaNorm}||${rtNorm}`;
+}
+
+function dedupeWargaList(rows) {
+    const seen = new Set();
+    const uniqueRows = [];
+    let duplicateCount = 0;
+    const duplicateItems = [];
+
+    rows.forEach(row => {
+        const key = buildWargaKey(row.nama, row.rt);
+        if (seen.has(key)) {
+            duplicateCount++;
+            duplicateItems.push({ nama: row.nama, rt: row.rt });
+            return;
+        }
+        seen.add(key);
+        uniqueRows.push(row);
+    });
+
+    return { uniqueRows, duplicateCount, duplicateItems };
+}
+
+// Load data dari localStorage
+function loadData() {
+    const saved = localStorage.getItem('qurbanWarga');
+    if (!saved) {
+        renderTable();
+        renderStats();
+        return;
+    }
+
+    try {
+        const parsed = JSON.parse(saved);
+        if (!Array.isArray(parsed)) throw new Error('Format data bukan array');
+
+        const normalized = parsed
+            .map(item => normalizeWargaRow(item))
+            .filter(Boolean);
+
+        daftarWarga = dedupeWargaList(normalized).uniqueRows;
+    } catch (err) {
+        daftarWarga = [];
+        showAlert(
+            'Data lokal terdeteksi rusak/tidak valid, data di-reset ke kosong.\n' +
+            `Detail: ${err.message}`,
+            'Pemulihan Data'
+        );
+    } finally {
+        renderTable();
+        renderStats();
+    }
+}
+
+// Simpan data ke localStorage
+function saveData() {
+    localStorage.setItem('qurbanWarga', JSON.stringify(daftarWarga));
+    renderTable();
+    renderStats();
+}
+
+function tambahWarga() {
+    const namaInput = document.getElementById('nama');
+    const rtInput = document.getElementById('rt');
+    const nama = namaInput.value.trim();
+    const rt = rtInput.value.trim();
+
+    if (!nama || !rt) {
+        showAlert('Nama dan RT wajib diisi.', 'Input Belum Lengkap');
+        return;
+    }
+
+    const newKey = buildWargaKey(nama, rt);
+    const exists = daftarWarga.some(w => buildWargaKey(w.nama, w.rt) === newKey);
+    if (exists) {
+        showAlert('Data duplikat: nama dan RT ini sudah ada.', 'Duplikat Terdeteksi');
+        return;
+    }
+    
+    daftarWarga.push({
+        id: generateUniqueId(),
+        nama,
+        rt
+    });
+    
+    namaInput.value = '';
+    rtInput.value = rtInput.value; // Biarkan RT tetap untuk input massal per RT
+    namaInput.focus();
+    
+    saveData();
+}
+
+function hapusWarga(id) {
+    if(confirm('Hapus data warga ini?')) {
+        daftarWarga = daftarWarga.filter(w => w.id !== id);
+        saveData();
+    }
+}
+
+function hapusSemua() {
+    if(confirm('PERHATIAN: Hapus semua data warga?')) {
+        daftarWarga = [];
+        saveData();
+    }
+}
+
+function renderTable() {
+    const tbody = document.querySelector('#tabelWarga tbody');
+    const keyword = document.getElementById('cariWarga').value.toLowerCase();
+    tbody.innerHTML = '';
+    
+    let filtered = daftarWarga.filter(w => 
+        w.nama.toLowerCase().includes(keyword) || 
+        w.rt.toLowerCase().includes(keyword)
+    );
+
+    const sorted = filtered.sort((a, b) => {
+        if (a.rt !== b.rt) return a.rt.localeCompare(b.rt, undefined, {numeric: true});
+        return a.nama.localeCompare(b.nama);
+    });
+
+    const rowsHtml = sorted.map((w, index) => `
+        <tr>
+            <td>${index + 1}</td>
+            <td style="font-weight:600;">${w.nama.toUpperCase()}</td>
+            <td><span class="badge-rt">RT ${w.rt}</span></td>
+            <td><button class="btn btn-danger" onclick='hapusWarga(${JSON.stringify(String(w.id))})' style="padding:4px 8px; font-size:0.8em;">×</button></td>
+        </tr>
+    `).join('');
+    tbody.innerHTML = rowsHtml;
+    
+    document.getElementById('totalWarga').textContent = daftarWarga.length;
+}
+
+function renderStats() {
+    const statsContainer = document.getElementById('statsContainer');
+    statsContainer.innerHTML = '';
+    
+    const rtCounts = {};
+    daftarWarga.forEach(w => {
+        rtCounts[w.rt] = (rtCounts[w.rt] || 0) + 1;
+    });
+    
+    const sortedRT = Object.keys(rtCounts).sort((a, b) => a.localeCompare(b, undefined, {numeric: true}));
+    
+    sortedRT.forEach(rt => {
+        const card = `
+            <div class="stat-card">
+                <span class="val">${rtCounts[rt]}</span>
+                <span class="lbl">RT ${rt}</span>
+            </div>
+        `;
+        statsContainer.insertAdjacentHTML('beforeend', card);
+    });
+}
+
+function generateCoupons() {
+    if (daftarWarga.length === 0) {
+        showAlert('Belum ada data warga.', 'Data Kosong');
+        return;
+    }
+
+    const printArea = document.getElementById('printArea');
+    const cols = parseInt(document.getElementById('kuponKolom').value) || 3;
+    const rows = parseInt(document.getElementById('kuponBaris').value) || 6;
+    const margin = parseInt(document.getElementById('kuponMargin').value) || 10;
+    const gap = parseInt(document.getElementById('kuponGap').value) || 2;
+    const fontScale = (parseInt(document.getElementById('kuponFontSize').value) || 100) / 100;
+    
+    const sorted = [...daftarWarga].sort((a, b) => {
+        if (a.rt !== b.rt) return a.rt.localeCompare(b.rt, undefined, {numeric: true});
+        return a.nama.localeCompare(b.nama);
+    });
+
+    const thn = new Date().getFullYear();
+    const thnH = document.getElementById('tahunHijriah').value || '....';
+
+    // Re-render more carefully for multiple pages
+    let allHtml = '';
+    const itemsPerPage = cols * rows;
+    
+    // Hitung tinggi bersih area cetak (A4 297mm)
+    // Kita gunakan kalkulasi mm yang presisi
+    const availableHeight = 297 - (margin * 2);
+    const singleCouponHeight = Math.floor((availableHeight - (gap * (rows - 1))) / rows);
+
+    for (let i = 0; i < sorted.length; i += itemsPerPage) {
+        let pageHtml = `<div style="display:grid; grid-template-columns: repeat(${cols}, 1fr); grid-template-rows: repeat(${rows}, ${singleCouponHeight}mm); gap: ${gap}mm; padding: ${margin}mm; width: 210mm; height: 297mm; box-sizing: border-box; break-after: page; page-break-after: always; background:white;">`;
+        for (let j = i; j < i + itemsPerPage && j < sorted.length; j++) {
+            const w = sorted[j];
+            pageHtml += `
+                <div class="coupon" style="height: ${singleCouponHeight}mm; border: 1px dashed #000 !important; margin: 0; box-sizing: border-box;">
+                    <div class="watermark" style="font-size: ${20 * fontScale}px;">QURBAN</div>
+                    <div class="coupon-header">
+                        <div class="coupon-title" style="font-size:${8 * fontScale}px;">KUPON QURBAN</div>
+                        <div class="coupon-no" style="font-size:${10 * fontScale}px;">#${(j + 1).toString().padStart(3, '0')}</div>
+                    </div>
+                    <div class="coupon-body" style="text-align:center;">
+                        <div class="coupon-name" style="font-size:${11 * fontScale}px;">${w.nama.toUpperCase()}</div>
+                        <div class="coupon-address" style="font-size:${8 * fontScale}px;">RT ${w.rt}</div>
+                    </div>
+                    <div class="coupon-footer" style="font-size:${7 * fontScale}px;">
+                        <div>AL-HIKMAH - ${thnH} H</div>
+                        <div style="font-weight:bold;">TUKAR DAGING</div>
+                    </div>
+                </div>
+            `;
+        }
+        pageHtml += `</div>`;
+        allHtml += pageHtml;
+    }
+    // Suntikkan margin dinamis khusus untuk cetak kupon
+    const style = document.createElement('style');
+    style.innerHTML = `@page { margin: 0 !important; }`;
+    document.head.appendChild(style);
+
+    printArea.innerHTML = allHtml;
+
+    printArea.style.display = 'block';
+    window.print();
+    printArea.style.display = 'none';
+    style.remove(); // Hapus margin dinamis setelah selesai
+}
+
+function generateAttendanceList() {
+    if (daftarWarga.length === 0) {
+        showAlert('Belum ada data warga.', 'Data Kosong');
+        return;
+    }
+
+    const container = document.getElementById('printArea');
+    container.innerHTML = '';
+    
+    // Suntikkan margin standar khusus untuk Daftar Hadir
+    const style = document.createElement('style');
+    style.innerHTML = `@page { margin: 15mm 10mm !important; }`;
+    document.head.appendChild(style);
+
+    const sorted = [...daftarWarga].sort((a, b) => {
+        if (a.rt !== b.rt) return a.rt.localeCompare(b.rt, undefined, {numeric: true});
+        return a.nama.localeCompare(b.nama);
+    });
+
+    const thn = new Date().getFullYear();
+    const thnH = document.getElementById('tahunHijriah').value || '....';
+    const tgl = new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' });
+
+    let tableRows = '';
+    sorted.forEach((w, index) => {
+        tableRows += `
+            <tr>
+                <td style="text-align:center;">${index + 1}</td>
+                <td style="text-align:center;">#${(index + 1).toString().padStart(3, '0')}</td>
+                <td><b>${w.nama.toUpperCase()}</b></td>
+                <td style="text-align:center;">RT ${w.rt}</td>
+                <td style="height:32px; width:170px; position:relative; font-size:9pt;">
+                    <span style="position:absolute; left:4px; top:4px; opacity:0.6;">${index + 1}.</span>
+                    <div style="border-bottom:0.8px dotted #888; width:78%; margin:20px auto 0 auto;"></div>
+                </td>
+                <td style="width:100px;"></td>
+            </tr>
+        `;
+    });
+
+    container.innerHTML = `
+        <div style="padding:22px; color:black; background:white; min-height:100vh;">
+            <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #222; padding-bottom:8px; margin-bottom:14px;">
+                <div style="text-align:left;">
+                    <h2 style="margin:0; font-size:15px; font-weight:700;">DAFTAR HADIR PENERIMA QURBAN</h2>
+                    <h3 style="margin:0; font-size:13px; font-weight:600;">MASJID AL-HIKMAH</h3>
+                </div>
+                <div style="text-align:right; font-size:10px; line-height:1.4;">
+                    Tahun: ${thn} M / ${thnH} H<br>
+                    Tanggal: ${tgl}
+                </div>
+            </div>
+            
+            <table class="print-table">
+                <thead>
+                    <tr>
+                        <th width="45" style="white-space:nowrap;">NO</th>
+                        <th width="85" style="white-space:nowrap;">KUPON</th>
+                        <th>NAMA PENERIMA (SESUAI KUPON)</th>
+                        <th width="70" style="white-space:nowrap;">RT</th>
+                        <th width="180">TANDA TANGAN / PARAF</th>
+                        <th>KETERANGAN</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${tableRows}
+                </tbody>
+            </table>
+            
+            <div style="margin-top:40px; display:flex; justify-content:flex-end;">
+                <div style="text-align:center; width:250px;">
+                    <p style="margin-bottom:60px;">Petugas Lapangan,</p>
+                    <p><b>( ............................................ )</b></p>
+                </div>
+            </div>
+        </div>
+    `;
+
+    document.getElementById('printArea').style.display = 'block';
+    window.print();
+    document.getElementById('printArea').style.display = 'none';
+    style.remove(); // Hapus margin dinamis setelah selesai
+}
+
+function exportData() {
+    if (daftarWarga.length === 0) {
+        showAlert('Tidak ada data untuk di-export.', 'Export Dibatalkan');
+        return;
+    }
+    const dataStr = JSON.stringify(daftarWarga, null, 2);
+    const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+    
+    const exportFileDefaultName = 'backup_warga_qurban_' + new Date().toISOString().slice(0,10) + '.json';
+    
+    const linkElement = document.createElement('a');
+    linkElement.setAttribute('href', dataUri);
+    linkElement.setAttribute('download', exportFileDefaultName);
+    linkElement.click();
+}
+
+function importData(input) {
+    if (input.files && input.files[0]) {
+        const file = input.files[0];
+        const fileName = file.name.toLowerCase();
+
+        if (fileName.endsWith('.json')) {
+            importFromJson(file, input);
+            return;
+        }
+
+        if (fileName.endsWith('.csv') || fileName.endsWith('.xls') || fileName.endsWith('.xlsx')) {
+            importFromSpreadsheet(file, input);
+            return;
+        }
+
+        showAlert('Format file belum didukung. Gunakan: JSON, CSV, XLS, atau XLSX.', 'Format Tidak Didukung');
+        input.value = '';
+    }
+}
+
+function importFromJson(file, inputEl) {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            const importedData = JSON.parse(e.target.result);
+            if (!Array.isArray(importedData)) {
+                showAlert('Format JSON tidak valid!', 'Import Gagal');
+                return;
+            }
+
+            const normalized = importedData
+                .map(item => normalizeWargaRow(item))
+                .filter(Boolean);
+
+            if (normalized.length === 0) {
+                showAlert('Tidak ada data warga valid pada file JSON.', 'Import Gagal');
+                return;
+            }
+
+            applyImportedWarga(normalized);
+        } catch (err) {
+            showAlert('Gagal membaca file JSON: ' + err.message, 'Import Gagal');
+        } finally {
+            inputEl.value = '';
+        }
+    };
+    reader.readAsText(file);
+}
+
+function importFromSpreadsheet(file, inputEl) {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            const workbook = XLSX.read(e.target.result, { type: 'array' });
+            const firstSheetName = workbook.SheetNames[0];
+            if (!firstSheetName) {
+                showAlert('File tidak memiliki sheet.', 'Import Gagal');
+                return;
+            }
+
+            const sheet = workbook.Sheets[firstSheetName];
+            const rows = XLSX.utils.sheet_to_json(sheet, { defval: '', raw: false });
+            if (!rows.length) {
+                showAlert('File tidak berisi data.', 'Import Gagal');
+                return;
+            }
+
+            const normalized = rows
+                .map(row => normalizeWargaRow(row))
+                .filter(Boolean);
+
+            if (normalized.length === 0) {
+                showAlert('Tidak ditemukan kolom yang cocok. Gunakan header seperti: nama, nama warga, rt.', 'Import Gagal');
+                return;
+            }
+
+            applyImportedWarga(normalized);
+        } catch (err) {
+            showAlert('Gagal membaca file spreadsheet: ' + err.message, 'Import Gagal');
+        } finally {
+            inputEl.value = '';
+        }
+    };
+    reader.readAsArrayBuffer(file);
+}
+
+function normalizeWargaRow(row) {
+    const keys = Object.keys(row || {});
+    const keyNama = findKey(keys, ['nama', 'nama warga', 'warga', 'penerima', 'nama lengkap']);
+    const keyRT = findKey(keys, ['rt', 'rt/rw', 'rt rw']);
+
+    if (!keyNama || !keyRT) return null;
+
+    const nama = String(row[keyNama] ?? '').trim();
+    const rt = String(row[keyRT] ?? '').trim();
+    if (!nama || !rt) return null;
+
+    return {
+        id: row.id ? String(row.id) : generateUniqueId(),
+        nama,
+        rt
+    };
+}
+
+function findKey(keys, candidates) {
+    const normalizedKeys = keys.map(k => ({ original: k, norm: normalizeKey(k) }));
+    for (const candidate of candidates) {
+        const target = normalizeKey(candidate);
+        const found = normalizedKeys.find(k => k.norm === target || k.norm.includes(target));
+        if (found) return found.original;
+    }
+    return null;
+}
+
+function normalizeKey(value) {
+    return String(value || '')
+        .toLowerCase()
+        .replace(/[^a-z0-9]/g, '');
+}
+
+function applyImportedWarga(importedRows) {
+    const mode = prompt(
+        `Ditemukan ${importedRows.length} data valid.\nKetik 1 untuk TIMPA data lama.\nKetik 2 untuk GABUNG ke data lama.`,
+        '2'
+    );
+
+    if (mode === null) return;
+
+    const beforeCount = daftarWarga.length;
+    let processed = [];
+    let duplicateCount = 0;
+    let duplicateItems = [];
+
+    if (mode === '1') {
+        const result = dedupeWargaList(importedRows);
+        processed = result.uniqueRows;
+        duplicateCount = result.duplicateCount;
+        duplicateItems = result.duplicateItems;
+        daftarWarga = processed;
+    } else if (mode === '2') {
+        const existingKeys = new Set(daftarWarga.map(w => buildWargaKey(w.nama, w.rt)));
+        const importOnly = dedupeWargaList(importedRows);
+        const acceptedRows = [];
+        const crossDuplicates = [];
+
+        importOnly.uniqueRows.forEach(row => {
+            const key = buildWargaKey(row.nama, row.rt);
+            if (existingKeys.has(key)) {
+                crossDuplicates.push({ nama: row.nama, rt: row.rt });
+                return;
+            }
+            existingKeys.add(key);
+            acceptedRows.push(row);
+        });
+
+        processed = [...daftarWarga, ...acceptedRows];
+        duplicateItems = [...importOnly.duplicateItems, ...crossDuplicates];
+        duplicateCount = duplicateItems.length;
+        daftarWarga = processed;
+    } else {
+        showAlert('Pilihan tidak valid. Import dibatalkan.', 'Import Dibatalkan');
+        return;
+    }
+
+    saveData();
+    const afterCount = daftarWarga.length;
+    const addedCount = Math.max(0, afterCount - (mode === '1' ? 0 : beforeCount));
+    const duplicatePreview = duplicateItems
+        .slice(0, 8)
+        .map((d, i) => `${i + 1}. ${d.nama} (RT ${d.rt})`)
+        .join('\n');
+    const duplicateTail = duplicateItems.length > 8
+        ? `\n... dan ${duplicateItems.length - 8} data duplikat lainnya.`
+        : '';
+
+    showAlert(
+        `Import selesai.\n` +
+        `Data valid di file: ${importedRows.length}\n` +
+        `Data ditambahkan: ${mode === '1' ? afterCount : addedCount}\n` +
+        `Duplikat dilewati: ${duplicateCount}` +
+        (duplicateCount > 0 ? `\n\nContoh duplikat:\n${duplicatePreview}${duplicateTail}` : ''),
+        'Ringkasan Import'
+    );
+}
+
+loadData();
+</script>
+
+</body>
+</html>

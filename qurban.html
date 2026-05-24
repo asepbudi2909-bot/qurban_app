@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Perhitungan Qurban AL-HIKMAH</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+
+body {
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  background: linear-gradient(135deg, #0f0f1a 0%, #1a1a2e 50%, #16213e 100%);
+  color: #e0e0e0;
+  height: 100vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  padding: 12px;
+  gap: 10px;
+}
+
+header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 10px 20px;
+  border-radius: 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+}
+
+header h1 { font-size: 1.3em; color: white; font-weight: 600; }
+header .badge { background: rgba(255,255,255,0.2); padding: 4px 12px; border-radius: 20px; font-size: 0.8em; }
+
+.main {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  grid-template-rows: 1fr auto;
+  gap: 10px;
+  flex: 1;
+  min-height: 0;
+}
+
+.panel {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 10px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+  overflow: hidden;
+}
+
+.panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+
+.panel-header h2 { font-size: 0.85em; color: #a78bfa; text-transform: uppercase; letter-spacing: 1px; }
+
+.btn {
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: white;
+  border: none;
+  padding: 4px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.75em;
+  transition: all 0.2s;
+}
+
+.btn:hover { transform: translateY(-1px); box-shadow: 0 3px 10px rgba(102, 126, 234, 0.4); }
+.btn-danger { background: linear-gradient(135deg, #ef4444, #dc2626); padding: 3px 8px; font-size: 0.7em; }
+
+table { width: 100%; border-collapse: collapse; font-size: 0.8em; }
+th { background: rgba(102, 126, 234, 0.3); color: #a78bfa; padding: 6px 8px; text-align: center; font-weight: 500; }
+td { padding: 5px 8px; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.05); }
+tr:hover td { background: rgba(255,255,255,0.03); }
+
+input[type="number"], input[type="text"] {
+  background: rgba(0,0,0,0.3);
+  border: 1px solid rgba(255,255,255,0.15);
+  color: #e0e0e0;
+  padding: 4px 6px;
+  border-radius: 5px;
+  text-align: center;
+  width: 80px;
+  font-size: 0.85em;
+}
+
+input:focus { outline: none; border-color: #667eea; box-shadow: 0 0 5px rgba(102, 126, 234, 0.5); }
+
+.stat-box {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin-top: auto;
+}
+
+.stat {
+  background: rgba(0,0,0,0.2);
+  border-radius: 8px;
+  padding: 8px;
+  text-align: center;
+}
+
+.stat .label { font-size: 0.65em; color: #888; text-transform: uppercase; margin-bottom: 3px; }
+.stat .value { font-size: 1.1em; font-weight: 600; color: #34d399; }
+.stat .value.purple { color: #a78bfa; }
+.stat .value.blue { color: #60a5fa; }
+.stat .value.orange { color: #fbbf24; }
+
+.result-panel {
+  grid-column: 1 / -1;
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));
+  border: 1px solid rgba(102, 126, 234, 0.3);
+}
+
+.result-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 10px;
+}
+
+.result-item {
+  background: rgba(0,0,0,0.2);
+  border-radius: 8px;
+  padding: 10px;
+  text-align: center;
+}
+
+.result-item .label { font-size: 0.7em; color: #888; margin-bottom: 5px; }
+.result-item .value { font-size: 1.3em; font-weight: 700; }
+.result-item .unit { font-size: 0.7em; color: #666; }
+
+.table-wrap { flex: 1; overflow-y: auto; min-height: 0; }
+.table-wrap::-webkit-scrollbar { width: 5px; }
+.table-wrap::-webkit-scrollbar-thumb { background: rgba(102, 126, 234, 0.5); border-radius: 3px; }
+
+.peserta-panel { background: linear-gradient(135deg, rgba(52, 211, 153, 0.08), rgba(16, 185, 129, 0.08)); border-color: rgba(52, 211, 153, 0.3); }
+
+.peserta-info { display: flex; flex-direction: column; gap: 10px; flex: 1; justify-content: center; }
+
+.peserta-card {
+  background: rgba(0,0,0,0.2);
+  border: 1px solid rgba(52, 211, 153, 0.2);
+  border-radius: 10px;
+  padding: 12px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  transition: all 0.2s;
+}
+
+.peserta-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(52, 211, 153, 0.2); }
+
+.peserta-icon { font-size: 2em; }
+
+.peserta-detail { text-align: left; }
+.peserta-detail .label { font-size: 0.7em; color: #888; text-transform: uppercase; }
+.peserta-detail .value.big { font-size: 1.8em; font-weight: 700; color: #34d399; }
+.peserta-detail .unit { font-size: 0.7em; color: #666; }
+
+.help { font-size: 0.7em; color: #666; margin-top: 5px; font-style: italic; }
+</style>
+</head>
+
+<body>
+
+<header>
+  <h1>🐄 Manajemen Qurban Al-Hikmah</h1>
+  <div style="display:flex; gap:10px; align-items:center;">
+    <button class="btn" onclick="location.href='warga.html'" style="background:linear-gradient(135deg, #10b981, #059669); border:none;">👥 Kelola Warga & Kupon</button>
+    <button class="btn btn-outline" onclick="downloadPDF()" style="background:transparent; border:1px solid rgba(255,255,255,0.4);">📄 Cetak Laporan</button>
+  </div>
+</header>
+
+<div class="main">
+  <!-- Panel 1: Data Sapi -->
+  <div class="panel">
+    <div class="panel-header">
+      <h2>1. Data Sapi</h2>
+      <button class="btn" onclick="tambahSapi()">+ Tambah</button>
+    </div>
+    <div class="table-wrap">
+      <table id="tabelSapi">
+        <tr><th>Sapi</th><th>Daging (kg)</th><th>Est. Gantingan</th><th>Aksi</th></tr>
+      </table>
+    </div>
+    <div class="stat-box">
+      <div class="stat"><div class="label">Total Daging</div><div class="value" id="total">0 kg</div></div>
+      <div class="stat"><div class="label">Jumlah Sapi</div><div class="value purple" id="jumlahSapi">0</div></div>
+    </div>
+  </div>
+
+  <!-- Panel 2: Peserta -->
+  <div class="panel peserta-panel">
+    <div class="panel-header">
+      <h2>2. Peserta Qurban</h2>
+    </div>
+    <div class="peserta-info">
+      <div class="peserta-card">
+        <div class="peserta-icon">👥</div>
+        <div class="peserta-detail">
+          <div class="label">Total Peserta</div>
+          <div class="value big" id="pesertaOrang">0</div>
+          <div class="unit">orang (1 sapi = 7 orang)</div>
+        </div>
+      </div>
+      <div class="peserta-card">
+        <div class="peserta-icon">📦</div>
+        <div class="peserta-detail">
+          <div class="label">Gantingan per Peserta</div>
+          <input type="number" id="gantinganPerPeserta" value="10" min="0" oninput="hitung()" style="width:60px; font-size:1.2em; text-align:center; background:rgba(0,0,0,0.3); border:1px solid rgba(52,211,153,0.4); color:#34d399; border-radius:6px; padding:4px;">
+          <div class="unit">kantong per peserta</div>
+        </div>
+      </div>
+      <div class="peserta-card">
+        <div class="peserta-icon">⚖️</div>
+        <div class="peserta-detail">
+          <div class="label">Jatah Peserta</div>
+          <div style="display:flex; align-items:center; gap:8px; margin-top:4px;">
+            <input type="checkbox" id="aktifJatah" checked onchange="hitung()" style="width:18px; height:18px; accent-color:#34d399;">
+            <span style="font-size:0.8em; color:#888;">1 /</span>
+            <input type="number" id="pembagiPeserta" value="3" min="1" max="20" oninput="hitung()" style="width:50px; font-size:1.1em; text-align:center; background:rgba(0,0,0,0.3); border:1px solid rgba(52,211,153,0.4); color:#34d399; border-radius:6px; padding:4px;">
+          </div>
+          <div class="unit">dari total daging (centang untuk aktif)</div>
+        </div>
+      </div>
+    </div>
+    <div class="help" style="text-align:center; margin-top:8px;">
+      Total Gantingan Peserta: <strong id="pesertaG" style="color:#34d399;">0</strong> kantong<br>
+      <span style="font-size:0.85em;">Default: 10 kantong/peserta • Jatah peserta 1/3 (disimpan otomatis)</span>
+    </div>
+  </div>
+
+  <!-- Panel 3: Distribusi -->
+  <div class="panel">
+    <div class="panel-header">
+      <h2>3. Distribusi Gantingan</h2>
+      <button class="btn" onclick="tambahKategori()">+ Kategori</button>
+    </div>
+    <div class="table-wrap">
+      <table id="tabelDistribusi">
+        <tr><th>Kategori</th><th>Jumlah</th><th>Aksi</th></tr>
+      </table>
+    </div>
+    <div class="stat-box">
+      <div class="stat"><div class="label">Total Gantingan</div><div class="value" id="totalG">0</div></div>
+      <div class="stat"><div class="label">Per Gantingan</div><div class="value purple" id="perG">0 kg</div></div>
+    </div>
+  </div>
+
+  <!-- Panel 4: Hasil -->
+  <div class="panel result-panel">
+    <div class="panel-header"><h2>4. Hasil Pembagian</h2></div>
+    <div class="result-grid">
+      <div class="result-item"><div class="label">Per Peserta</div><div class="value" id="perPeserta">0</div><div class="unit">kg/orang</div></div>
+      <div class="result-item"><div class="label">Jatah Peserta (1/3)</div><div class="value purple" id="jatahPeserta">0</div><div class="unit">kg</div></div>
+      <div class="result-item"><div class="label">Sisa Gantingan (2/3)</div><div class="value blue" id="sisa">0</div><div class="unit">kg</div></div>
+      <div class="result-item"><div class="label">Isi per Kantong</div><div class="value orange" id="perG2">0</div><div class="unit" id="perGGram">0 gram</div></div>
+    </div>
+  </div>
+</div>
+
+<script>
+let sapiCount = 0;
+
+function toNonNegativeNumber(value, fallback = 0) {
+    const num = parseFloat(value);
+    if (!Number.isFinite(num)) return fallback;
+    return Math.max(0, num);
+}
+
+function formatKg(value, decimals = 3) {
+    return Number(value || 0).toFixed(decimals);
+}
+
+function tambahSapi(){
+    sapiCount++;
+    let row = `<tr><td>Sapi ${sapiCount}</td><td><input type="number" min="0" step="0.1" oninput="hitung()"></td><td class="est-g">0</td><td><button class="btn btn-danger" onclick="hapusRow(this)">×</button></td></tr>`;
+    document.getElementById('tabelSapi').insertAdjacentHTML('beforeend', row);
+}
+
+function tambahKategori(){
+    let row = `<tr><td><input type="text" placeholder="Nama kategori"></td><td><input type="number" min="0" value="0" oninput="hitung()"></td><td><button class="btn btn-danger" onclick="hapusRow(this)">×</button></td></tr>`;
+    document.getElementById('tabelDistribusi').insertAdjacentHTML('beforeend', row);
+}
+
+function hapusRow(btn){
+    btn.closest('tr').remove();
+    hitung();
+    saveData();
+}
+
+function hitung(){
+    let total = 0;
+    let sapiRows = document.querySelectorAll("#tabelSapi tr");
+    let jumlahSapi = 0;
+
+    sapiRows.forEach((row,i)=>{
+        if(i===0) return;
+        jumlahSapi++;
+        let val = toNonNegativeNumber(row.querySelector("input").value, 0);
+        total += val;
+    });
+
+    let pesertaOrang = jumlahSapi * 7;
+    let gantinganPerPeserta = toNonNegativeNumber(document.getElementById('gantinganPerPeserta').value, 10);
+    let pesertaG = pesertaOrang * gantinganPerPeserta;
+
+    let totalG = pesertaG;
+    let distRows = document.querySelectorAll("#tabelDistribusi tr");
+    distRows.forEach((row,i)=>{
+        if(i===0) return;
+        let val = toNonNegativeNumber(row.querySelectorAll("input")[1].value, 0);
+        totalG += val;
+    });
+
+    let pembagi = toNonNegativeNumber(document.getElementById('pembagiPeserta').value, 3);
+    if (pembagi < 1) pembagi = 1;
+    let aktif = document.getElementById('aktifJatah').checked;
+    let jatahPeserta = aktif ? (total / pembagi) : 0;
+    if (jatahPeserta > total) jatahPeserta = total;
+    let perPeserta = pesertaOrang ? jatahPeserta/pesertaOrang : 0;
+    let sisa = total - jatahPeserta;
+    let perG = totalG ? sisa/totalG : 0;
+
+    document.getElementById('total').textContent = total.toFixed(1) + ' kg';
+    document.getElementById('jumlahSapi').textContent = jumlahSapi;
+    document.getElementById('pesertaOrang').textContent = pesertaOrang;
+    document.getElementById('pesertaG').textContent = pesertaG;
+    document.getElementById('totalG').textContent = totalG;
+    document.getElementById('perG').textContent = formatKg(perG, 3);
+    document.getElementById('sisa').textContent = sisa.toFixed(1);
+    document.getElementById('jatahPeserta').textContent = jatahPeserta.toFixed(1);
+    
+    document.getElementById('perPeserta').textContent = perPeserta.toFixed(2);
+    document.getElementById('perG2').textContent = formatKg(perG, 3);
+    document.getElementById('perGGram').textContent = `${Math.round(perG * 1000)} gram`;
+
+    sapiRows.forEach((row,i)=>{
+        if(i===0) return;
+        let val = toNonNegativeNumber(row.querySelector("input").value, 0);
+        let dagingGantingan = aktif ? (val - (val/pembagi)) : val;
+        let g = perG ? dagingGantingan/perG : 0;
+        row.querySelector('.est-g').textContent = g.toFixed(0);
+    });
+    saveData();
+}
+
+// Load saved values from localStorage
+function loadDefaults() {
+    const saved = localStorage.getItem('qurbanSettings');
+    if (!saved) return;
+    try {
+        const settings = JSON.parse(saved);
+        document.getElementById('gantinganPerPeserta').value = toNonNegativeNumber(settings.gantinganPerPeserta, 10);
+        document.getElementById('pembagiPeserta').value = Math.max(1, toNonNegativeNumber(settings.pembagiPeserta, 3));
+        document.getElementById('aktifJatah').checked = Boolean(settings.aktifJatah ?? true);
+    } catch (_) {
+        localStorage.removeItem('qurbanSettings');
+    }
+}
+
+// Load saved data (sapi + distribusi)
+function loadData() {
+    const data = localStorage.getItem('qurbanData');
+    if (data) {
+        let parsed;
+        try {
+            parsed = JSON.parse(data);
+        } catch (_) {
+            localStorage.removeItem('qurbanData');
+            return;
+        }
+        const sapi = Array.isArray(parsed.sapi) ? parsed.sapi : [];
+        const distribusi = Array.isArray(parsed.distribusi) ? parsed.distribusi : [];
+
+        // Clear default rows
+        document.querySelectorAll('#tabelSapi tr:not(:first-child)').forEach(r => r.remove());
+        document.querySelectorAll('#tabelDistribusi tr:not(:first-child)').forEach(r => r.remove());
+        sapiCount = 0;
+
+        // Restore sapi rows
+        sapi.forEach(val => {
+            sapiCount++;
+            let row = `<tr><td>Sapi ${sapiCount}</td><td><input type="number" min="0" step="0.1" value="${toNonNegativeNumber(val, 0)}" oninput="hitung()"></td><td class="est-g">0</td><td><button class="btn btn-danger" onclick="hapusRow(this)">×</button></td></tr>`;
+            document.getElementById('tabelSapi').insertAdjacentHTML('beforeend', row);
+        });
+
+        // Restore distribusi rows
+        distribusi.forEach(k => {
+            const nama = (k && typeof k.nama === 'string') ? k.nama : '';
+            const jumlah = toNonNegativeNumber(k && k.jumlah, 0);
+            let row = `<tr><td><input type="text" value="${nama}" placeholder="Nama kategori"></td><td><input type="number" min="0" value="${jumlah}" oninput="hitung()"></td><td><button class="btn btn-danger" onclick="hapusRow(this)">×</button></td></tr>`;
+            document.getElementById('tabelDistribusi').insertAdjacentHTML('beforeend', row);
+        });
+    }
+}
+
+// Save values to localStorage
+function saveDefaults() {
+    const settings = {
+        gantinganPerPeserta: document.getElementById('gantinganPerPeserta').value,
+        pembagiPeserta: document.getElementById('pembagiPeserta').value,
+        aktifJatah: document.getElementById('aktifJatah').checked
+    };
+    localStorage.setItem('qurbanSettings', JSON.stringify(settings));
+}
+
+// Save all data (sapi + distribusi + settings)
+function saveData() {
+    const sapi = [];
+    document.querySelectorAll('#tabelSapi tr').forEach((row, i) => {
+        if (i === 0) return;
+        sapi.push(row.querySelector('input').value || 0);
+    });
+
+    const distribusi = [];
+    document.querySelectorAll('#tabelDistribusi tr').forEach((row, i) => {
+        if (i === 0) return;
+        const inputs = row.querySelectorAll('input');
+        distribusi.push({ nama: inputs[0].value, jumlah: inputs[1].value || 0 });
+    });
+
+    localStorage.setItem('qurbanData', JSON.stringify({ sapi, distribusi }));
+}
+
+// Default rows only if no saved data
+function initDefaultRows() {
+    const data = localStorage.getItem('qurbanData');
+    if (!data) {
+        tambahSapi(); tambahSapi(); tambahSapi();
+        tambahKategori(); tambahKategori();
+    }
+}
+
+// Download PDF function (works offline using print)
+function downloadPDF() {
+    const pesertaOrang = document.getElementById('pesertaOrang').textContent;
+    const pesertaG = document.getElementById('pesertaG').textContent;
+    const gantinganPerPeserta = document.getElementById('gantinganPerPeserta').value;
+    const aktif = document.getElementById('aktifJatah').checked;
+    const pembagi = document.getElementById('pembagiPeserta').value;
+    const total = document.getElementById('total').textContent;
+    const jumlahSapi = document.getElementById('jumlahSapi').textContent;
+    const jatahPeserta = document.getElementById('jatahPeserta').textContent;
+    const perPeserta = document.getElementById('perPeserta').textContent;
+    const sisa = document.getElementById('sisa').textContent;
+    const perG = document.getElementById('perG').textContent;
+    const totalG = document.getElementById('totalG').textContent;
+
+    // Build sapi rows
+    let sapiRows = '';
+    let i = 1;
+    document.querySelectorAll('#tabelSapi tr').forEach((row) => {
+        if (i === 1) { i++; return; }
+        const input = row.querySelector('input');
+        const val = parseFloat(input.value) || 0;
+        const est = row.querySelector('.est-g').textContent;
+        sapiRows += `<tr><td>Sapi ${i-1}</td><td>${val.toFixed(1)} kg</td><td>${est} kantong</td></tr>`;
+        i++;
+    });
+    sapiRows += `<tr class="total-row"><td>TOTAL</td><td>${total}</td><td>${jumlahSapi} ekor</td></tr>`;
+
+    // Build distribusi rows
+    let distRows = '';
+    let j = 1;
+    document.querySelectorAll('#tabelDistribusi tr').forEach((row) => {
+        if (j === 1) { j++; return; }
+        const inputs = row.querySelectorAll('input');
+        distRows += `<tr><td>${inputs[0].value || '-'}</td><td>${inputs[1].value || 0} kantong</td></tr>`;
+        j++;
+    });
+    distRows += `<tr class="total-row"><td>TOTAL</td><td>${totalG} kantong</td></tr>`;
+
+    const today = new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' });
+
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(`<!DOCTYPE html><html><head><title>Laporan Qurban AL-HIKMAH</title>
+<style>
+body { font-family: 'Segoe UI', Arial, sans-serif; margin: 30px; color: #222; }
+h1 { text-align: center; margin-bottom: 5px; font-size: 20px; border-bottom: 2px solid #2c3e50; padding-bottom: 10px; }
+h2 { text-align: center; margin-top: 0; font-size: 14px; color: #555; font-weight: normal; margin-bottom: 20px; }
+h3 { font-size: 14px; margin: 20px 0 10px 0; color: #2c3e50; border-bottom: 1px solid #ddd; padding-bottom: 5px; }
+table { width: 100%; border-collapse: collapse; margin: 10px 0 15px 0; font-size: 12px; }
+th, td { border: 1px solid #ccc; padding: 6px 8px; text-align: center; }
+th { background: #2c3e50; color: white; }
+.total-row { font-weight: bold; background: #f0f0f0; }
+.info { margin: 5px 0; font-size: 12px; padding-left: 15px; }
+.info span { font-weight: bold; }
+.footer { text-align: center; margin-top: 30px; font-size: 9px; color: #999; border-top: 1px solid #ddd; padding-top: 10px; }
+@media print { body { margin: 15px; } .no-print { display: none; } }
+</style></head><body>
+<h1>LAPORAN PERHITUNGAN QURBAN</h1>
+<h2>AL-HIKMAH - ${today}</h2>
+
+<h3>1. DATA SAPI</h3>
+<table><tr><th>Sapi</th><th>Daging</th><th>Est. Gantingan</th></tr>${sapiRows}</table>
+
+<h3>2. PESERTA QURBAN</h3>
+<div class="info">Total Peserta: <span>${pesertaOrang} orang</span> (1 sapi = 7 orang)</div>
+<div class="info">Gantingan per Peserta: <span>${gantinganPerPeserta} kantong</span></div>
+<div class="info">Total Gantingan Peserta: <span>${pesertaG} kantong</span></div>
+<div class="info">Jatah Peserta: <span>${aktif ? 'Aktif (1/' + pembagi + ' dari total daging)' : 'Nonaktif'}</span></div>
+
+<h3>3. DISTRIBUSI GANTINGAN</h3>
+<table><tr><th>Kategori</th><th>Jumlah</th></tr>${distRows}</table>
+
+<h3>4. HASIL PEMBAGIAN</h3>
+<div class="info">Jatah Peserta (1/${pembagi}): <span>${jatahPeserta} kg</span></div>
+<div class="info">Per Peserta: <span>${perPeserta} kg/orang</span></div>
+<div class="info">Sisa untuk Gantingan (2/3): <span>${sisa} kg</span></div>
+<div class="info">Isi per Gantingan: <span>${perG} kg/kantong</span></div>
+
+<div class="footer">Dicetak dari Aplikasi Qurban Al-Hikmah | ${today}</div>
+<div class="no-print" style="text-align:center; margin-top:20px;">
+<button onclick="window.print()" style="padding:10px 20px; font-size:14px; cursor:pointer; background:#2c3e50; color:white; border:none; border-radius:5px;">🖨️ Cetak PDF</button>
+</div>
+</body></html>`);
+    printWindow.document.close();
+}
+
+// Auto-save on change
+document.getElementById('gantinganPerPeserta').addEventListener('change', saveDefaults);
+document.getElementById('pembagiPeserta').addEventListener('change', saveDefaults);
+document.getElementById('aktifJatah').addEventListener('change', saveDefaults);
+
+// Init
+initDefaultRows();
+loadData();
+loadDefaults();
+hitung();
+</script>
+
+</body>
+</html>
