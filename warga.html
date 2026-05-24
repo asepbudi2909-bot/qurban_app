@@ -21,15 +21,22 @@ body {
 
 header {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  padding: 15px 25px;
+  padding: 12px 18px;
   border-radius: 12px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  box-shadow: 0 4px 20px rgba(102, 126, 234, 0.3);
+  gap: 14px;
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.35);
 }
 
-header h1 { font-size: 1.4em; color: white; font-weight: 700; letter-spacing: 0.5px; }
+header h1 { font-size: 1.2em; color: white; font-weight: 700; letter-spacing: 0.3px; }
+
+.nav-group { display:flex; align-items:center; gap:8px; flex-wrap:wrap; justify-content:flex-end; }
+.nav-divider { width:1px; height:28px; background:rgba(255,255,255,0.2); }
+.btn-nav { padding:7px 12px; font-size:0.8em; border:1px solid rgba(255,255,255,0.22); }
+.btn-nav.active { border-color: rgba(255,255,255,0.55); box-shadow: inset 0 0 0 1px rgba(255,255,255,0.18); }
+.btn-nav.outline { background:transparent; color:#e5e7eb; }
 
 .container {
   display: grid;
@@ -257,28 +264,15 @@ tr:hover td { background: rgba(255,255,255,0.03); }
 
 <header>
   <h1>👥 Penerima & Kupon Qurban</h1>
-  <div style="display:flex; gap:12px; align-items:center;">
-    <!-- Navigasi Utama -->
-    <button class="btn" onclick="location.href='index.html'" style="background:linear-gradient(135deg, #3b82f6, #2563eb); border:none; padding:8px 15px;">📊 Kalkulator Daging</button>
-    
-    <!-- Pemisah -->
-    <div style="width:1px; height:30px; background:rgba(255,255,255,0.15);"></div>
-    
-    <!-- Grup Backup -->
-    <div style="display:flex; gap:6px;">
-      <button class="btn btn-outline" onclick="exportData()" style="padding:6px 12px; font-size:0.8em; border-color:rgba(255,255,255,0.2); color:#aaa;" title="Backup Data ke File">💾 Export</button>
-      <button class="btn btn-outline" onclick="document.getElementById('importFile').click()" style="padding:6px 12px; font-size:0.8em; border-color:rgba(255,255,255,0.2); color:#aaa;" title="Import JSON / CSV / Excel">📥 Import</button>
-      <input type="file" id="importFile" style="display:none" accept=".json,.csv,.xls,.xlsx" onchange="importData(this)">
-    </div>
-
-    <!-- Pemisah -->
-    <div style="width:1px; height:30px; background:rgba(255,255,255,0.15);"></div>
-
-    <!-- Grup Cetak -->
-    <div style="display:flex; gap:10px;">
-      <button class="btn btn-outline" onclick="generateAttendanceList()" style="border-color:#34d399; color:#34d399; padding:8px 15px;">📋 Daftar Hadir</button>
-      <button class="btn" onclick="generateCoupons()" style="padding:8px 15px;">🎟️ Cetak Kupon</button>
-    </div>
+  <div class="nav-group">
+    <button class="btn btn-nav outline" onclick="location.href='index.html'">📊 Kalkulator Daging</button>
+    <button class="btn btn-nav active" onclick="location.href='warga.html'">👥 Data Warga & Kupon</button>
+    <div class="nav-divider"></div>
+    <button class="btn btn-nav outline" onclick="exportData()" title="Backup Data ke File">💾 Export</button>
+    <button class="btn btn-nav outline" onclick="document.getElementById('importFile').click()" title="Import JSON / CSV / Excel">📥 Import</button>
+    <button class="btn btn-nav outline" onclick="generateAttendanceList()">📋 Daftar Hadir</button>
+    <button class="btn btn-nav" onclick="generateCoupons()">🎟️ Cetak Kupon</button>
+    <input type="file" id="importFile" style="display:none" accept=".json,.csv,.xls,.xlsx" onchange="importData(this)">
   </div>
 </header>
 
