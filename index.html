@@ -12,7 +12,7 @@ body { height: 100vh; overflow: hidden; }
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
   grid-template-rows: 1fr auto;
-  gap: 10px;
+  gap: 0.625rem;
   flex: 1;
   min-height: 0;
 }
@@ -20,43 +20,43 @@ body { height: 100vh; overflow: hidden; }
 .panel { overflow: hidden; }
 
 .main table th, .main table td { text-align: center; }
-.main table td { padding: 5px 8px; }
+.main table td { padding: 0.3125rem 0.5rem; }
 
 input[type="number"], input[type="text"] {
-  padding: 4px 6px;
+  padding: 0.25rem 0.375rem;
   text-align: center;
   font-size: 0.85em;
 }
 
-input.hewan-nama, input.hewan-daging { width: 80px; }
+input.hewan-nama, input.hewan-daging { width: 5rem; }
 select.hewan-jenis {
-  width: 90px;
+  width: 5.625rem;
   padding: 4px 6px;
   font-size: 0.85em;
   cursor: pointer;
 }
 
-.btn-danger { padding: 3px 8px; font-size: 0.7em; }
+.btn-danger { padding: 0.1875rem 0.5rem; font-size: 0.7em; }
 
 .table-wrap { flex: 1; overflow-y: auto; min-height: 0; }
 
 .stat-box {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 8px;
+  gap: 0.5rem;
   margin-top: auto;
 }
 
 .stat .label { font-size: 0.65em; color: #888; text-transform: uppercase; margin-bottom: 3px; }
 .stat .value { font-size: 1.1em; font-weight: 600; color: #34d399; }
-.stat .value.purple { color: #a78bfa; }
-.stat .value.blue { color: #60a5fa; }
+.stat .value.purple { color: #e7c66b; }
+.stat .value.blue { color: #2dd4bf; }
 .stat .value.orange { color: #fbbf24; }
 
 .result-panel {
   grid-column: 1 / -1;
-  background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));
-  border: 1px solid rgba(102, 126, 234, 0.3);
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.12), rgba(4, 120, 87, 0.12));
+  border: 1px solid rgba(16, 185, 129, 0.35);
 }
 
 .result-grid {
@@ -83,8 +83,8 @@ select.hewan-jenis {
 .peserta-card {
   background: rgba(0,0,0,0.2);
   border: 1px solid rgba(52, 211, 153, 0.2);
-  border-radius: 10px;
-  padding: 12px;
+  border-radius: 0.625rem;
+  padding: 0.75rem;
   display: flex;
   align-items: center;
   gap: 12px;
@@ -480,6 +480,7 @@ th { background: #2c3e50; color: white; }
 .footer { text-align: center; margin-top: 30px; font-size: 9px; color: #999; border-top: 1px solid #ddd; padding-top: 10px; }
 @media print { body { margin: 15px; } .no-print { display: none; } }
 </style></head><body>
+<div dir="rtl" lang="ar" style="text-align:center; font-size:13px; color:#0d6b4c; margin-bottom:6px;">بِسْمِ اللّٰهِ الرَّحْمٰنِ الرَّحِيْمِ</div>
 <h1>LAPORAN PERHITUNGAN QURBAN</h1>
 <h2>AL-HIKMAH - ${today}</h2>
 
