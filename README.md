@@ -45,5 +45,6 @@ Gunakan tombol **Export** di halaman Data Warga untuk mengunduh seluruh data seb
 ```
 index.html              Kalkulator daging qurban
 warga.html              Data penerima, kupon, daftar hadir
+assets/style.css        Style bersama antar halaman (header, panel, tombol, tabel, statistik)
 assets/xlsx.full.min.js SheetJS 0.20.3 (CDN SheetJS, untuk import CSV/Excel)
 ```
