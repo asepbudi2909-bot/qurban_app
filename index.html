@@ -310,7 +310,7 @@ function hitung(){
 
     sapiRows.forEach((row,i)=>{
         if(i===0) return;
-        let val = toNonNegativeNumber(row.querySelector("input").value, 0);
+        let val = toNonNegativeNumber(row.querySelector(".hewan-daging").value, 0);
         let dagingGantingan = aktif ? (val - (val/pembagi)) : val;
         let g = perG ? dagingGantingan/perG : 0;
         row.querySelector('.est-g').textContent = g.toFixed(0);
