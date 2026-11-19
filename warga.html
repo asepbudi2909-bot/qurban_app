@@ -460,7 +460,7 @@ function loadData() {
             .filter(Boolean);
 
         daftarWarga = dedupeWargaList(normalized).uniqueRows;
-        if (ensureKuponNumbers()) {
+        if (perbaikiNomorKuponDuplikat()) {
             localStorage.setItem('qurbanWarga', JSON.stringify(daftarWarga));
         }
     } catch (err) {
@@ -959,8 +959,26 @@ function normalizeWargaRow(row) {
     return {
         id: row.id ? String(row.id) : generateUniqueId(),
         nama,
-        rt
+        rt,
+        noKupon: (Number.isInteger(row.noKupon) && row.noKupon >= 1) ? row.noKupon : undefined,
+        sudahTukar: row.sudahTukar === true
     };
+}
+
+function perbaikiNomorKuponDuplikat() {
+    const seen = new Set();
+    let adaYangDibersihkan = false;
+    sortWargaCopy().forEach(w => {
+        if (Number.isInteger(w.noKupon) && w.noKupon >= 1) {
+            if (seen.has(w.noKupon)) {
+                w.noKupon = undefined;
+                adaYangDibersihkan = true;
+                return;
+            }
+            seen.add(w.noKupon);
+        }
+    });
+    return adaYangDibersihkan || ensureKuponNumbers();
 }
 
 function findKey(keys, candidates) {
@@ -1023,6 +1041,9 @@ function applyImportedWarga(importedRows) {
         return;
     }
 
+    // Nomor kupon dari file backup bisa bentrok di mode gabung —
+    // nomor yang dobel dilepas lalu diisi ulang sesudah nomor terbesar.
+    perbaikiNomorKuponDuplikat();
     saveData();
     const afterCount = daftarWarga.length;
     const addedCount = Math.max(0, afterCount - (mode === '1' ? 0 : beforeCount));
