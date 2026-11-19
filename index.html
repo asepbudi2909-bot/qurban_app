@@ -291,6 +291,15 @@ function formatKg(value, decimals = 3) {
     return Number(value || 0).toFixed(decimals);
 }
 
+function escAttr(value) {
+    return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+}
+
 function tambahSapi(){
     sapiCount++;
     let row = `<tr><td>Sapi ${sapiCount}</td><td><input type="number" min="0" step="0.1" oninput="hitung()"></td><td class="est-g">0</td><td><button class="btn btn-danger" onclick="hapusRow(this)">×</button></td></tr>`;
@@ -408,7 +417,7 @@ function loadData() {
         distribusi.forEach(k => {
             const nama = (k && typeof k.nama === 'string') ? k.nama : '';
             const jumlah = toNonNegativeNumber(k && k.jumlah, 0);
-            let row = `<tr><td><input type="text" value="${nama}" placeholder="Nama kategori"></td><td><input type="number" min="0" value="${jumlah}" oninput="hitung()"></td><td><button class="btn btn-danger" onclick="hapusRow(this)">×</button></td></tr>`;
+            let row = `<tr><td><input type="text" value="${escAttr(nama)}" placeholder="Nama kategori"></td><td><input type="number" min="0" value="${jumlah}" oninput="hitung()"></td><td><button class="btn btn-danger" onclick="hapusRow(this)">×</button></td></tr>`;
             document.getElementById('tabelDistribusi').insertAdjacentHTML('beforeend', row);
         });
     }
@@ -493,6 +502,10 @@ function downloadPDF() {
     const today = new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' });
 
     const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+        alert('Popup diblokir browser. Izinkan popup untuk halaman ini agar laporan bisa dicetak.');
+        return;
+    }
     printWindow.document.write(`<!DOCTYPE html><html><head><title>Laporan Qurban AL-HIKMAH</title>
 <style>
 body { font-family: 'Segoe UI', Arial, sans-serif; margin: 30px; color: #222; }
