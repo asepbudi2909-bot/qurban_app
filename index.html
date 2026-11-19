@@ -25,8 +25,15 @@ body { height: 100vh; overflow: hidden; }
 input[type="number"], input[type="text"] {
   padding: 4px 6px;
   text-align: center;
-  width: 80px;
   font-size: 0.85em;
+}
+
+input.hewan-nama, input.hewan-daging { width: 80px; }
+select.hewan-jenis {
+  width: 90px;
+  padding: 4px 6px;
+  font-size: 0.85em;
+  cursor: pointer;
 }
 
 .btn-danger { padding: 3px 8px; font-size: 0.7em; }
@@ -113,17 +120,17 @@ input[type="number"], input[type="text"] {
   <!-- Panel 1: Data Sapi -->
   <div class="panel">
     <div class="panel-header">
-      <h2>1. Data Sapi</h2>
+      <h2>1. Data Hewan</h2>
       <button class="btn" onclick="tambahSapi()">+ Tambah</button>
     </div>
     <div class="table-wrap">
       <table id="tabelSapi">
-        <tr><th>Sapi</th><th>Daging (kg)</th><th>Est. Gantingan</th><th>Aksi</th></tr>
+        <tr><th>Nama</th><th>Jenis</th><th>Daging (kg)</th><th>Est. Gantingan</th><th>Aksi</th></tr>
       </table>
     </div>
     <div class="stat-box">
       <div class="stat"><div class="label">Total Daging</div><div class="value" id="total">0 kg</div></div>
-      <div class="stat"><div class="label">Jumlah Sapi</div><div class="value purple" id="jumlahSapi">0</div></div>
+      <div class="stat"><div class="label">Jumlah Ekor</div><div class="value purple" id="jumlahSapi">0</div></div>
     </div>
   </div>
 
@@ -138,7 +145,7 @@ input[type="number"], input[type="text"] {
         <div class="peserta-detail">
           <div class="label">Total Peserta</div>
           <div class="value big" id="pesertaOrang">0</div>
-          <div class="unit">orang (1 sapi = 7 orang)</div>
+          <div class="unit">porsi (sapi = 7, kambing/domba = 1)</div>
         </div>
       </div>
       <div class="peserta-card">
@@ -200,6 +207,8 @@ input[type="number"], input[type="text"] {
 <script>
 let sapiCount = 0;
 
+const PORSI_HEWAN = { Sapi: 7, Kambing: 1, Domba: 1 };
+
 function toNonNegativeNumber(value, fallback = 0) {
     const num = parseFloat(value);
     if (!Number.isFinite(num)) return fallback;
@@ -219,9 +228,23 @@ function escAttr(value) {
         .replace(/>/g, '&gt;');
 }
 
-function tambahSapi(){
+function barisHewanHtml(namaHewan, jenis, daging) {
     sapiCount++;
-    let row = `<tr><td>Sapi ${sapiCount}</td><td><input type="number" min="0" step="0.1" oninput="hitung()"></td><td class="est-g">0</td><td><button class="btn btn-danger" onclick="hapusRow(this)">×</button></td></tr>`;
+    const nama = escAttr(namaHewan);
+    const jenisOpsi = Object.keys(PORSI_HEWAN).map(j =>
+        `<option value="${j}" ${j === jenis ? 'selected' : ''}>${j}</option>`
+    ).join('');
+    return `<tr>
+        <td><input type="text" class="hewan-nama" value="${nama}" oninput="saveData()"></td>
+        <td><select class="hewan-jenis" onchange="hitung()">${jenisOpsi}</select></td>
+        <td><input type="number" class="hewan-daging" min="0" step="0.1" value="${daging}" oninput="hitung()"></td>
+        <td class="est-g">0</td>
+        <td><button class="btn btn-danger" onclick="hapusRow(this)">×</button></td>
+    </tr>`;
+}
+
+function tambahSapi(){
+    const row = barisHewanHtml(`Sapi ${sapiCount + 1}`, 'Sapi', '');
     document.getElementById('tabelSapi').insertAdjacentHTML('beforeend', row);
 }
 
@@ -240,15 +263,18 @@ function hitung(){
     let total = 0;
     let sapiRows = document.querySelectorAll("#tabelSapi tr");
     let jumlahSapi = 0;
+    let porsi = 0;
 
     sapiRows.forEach((row,i)=>{
         if(i===0) return;
         jumlahSapi++;
-        let val = toNonNegativeNumber(row.querySelector("input").value, 0);
+        const jenis = row.querySelector(".hewan-jenis").value;
+        porsi += PORSI_HEWAN[jenis] || 7;
+        let val = toNonNegativeNumber(row.querySelector(".hewan-daging").value, 0);
         total += val;
     });
 
-    let pesertaOrang = jumlahSapi * 7;
+    let pesertaOrang = porsi;
     let gantinganPerPeserta = toNonNegativeNumber(document.getElementById('gantinganPerPeserta').value, 10);
     let pesertaG = pesertaOrang * gantinganPerPeserta;
 
@@ -284,7 +310,7 @@ function hitung(){
 
     sapiRows.forEach((row,i)=>{
         if(i===0) return;
-        let val = toNonNegativeNumber(row.querySelector("input").value, 0);
+        let val = toNonNegativeNumber(row.querySelector(".hewan-daging").value, 0);
         let dagingGantingan = aktif ? (val - (val/pembagi)) : val;
         let g = perG ? dagingGantingan/perG : 0;
         row.querySelector('.est-g').textContent = g.toFixed(0);
@@ -317,7 +343,7 @@ function loadData() {
             localStorage.removeItem('qurbanData');
             return;
         }
-        const sapi = Array.isArray(parsed.sapi) ? parsed.sapi : [];
+        const sapiMentah = Array.isArray(parsed.sapi) ? parsed.sapi : [];
         const distribusi = Array.isArray(parsed.distribusi) ? parsed.distribusi : [];
 
         // Clear default rows
@@ -325,11 +351,19 @@ function loadData() {
         document.querySelectorAll('#tabelDistribusi tr:not(:first-child)').forEach(r => r.remove());
         sapiCount = 0;
 
-        // Restore sapi rows
-        sapi.forEach(val => {
-            sapiCount++;
-            let row = `<tr><td>Sapi ${sapiCount}</td><td><input type="number" min="0" step="0.1" value="${toNonNegativeNumber(val, 0)}" oninput="hitung()"></td><td class="est-g">0</td><td><button class="btn btn-danger" onclick="hapusRow(this)">×</button></td></tr>`;
-            document.getElementById('tabelSapi').insertAdjacentHTML('beforeend', row);
+        // Restore hewan rows (dukung format lama: array angka)
+        sapiMentah.forEach((val, idx) => {
+            let namaHewan, jenis, daging;
+            if (val && typeof val === 'object') {
+                namaHewan = (typeof val.nama === 'string' && val.nama.trim()) ? val.nama : `Hewan ${idx + 1}`;
+                jenis = PORSI_HEWAN[val.jenis] !== undefined ? val.jenis : 'Sapi';
+                daging = toNonNegativeNumber(val.daging, 0);
+            } else {
+                namaHewan = `Sapi ${idx + 1}`;
+                jenis = 'Sapi';
+                daging = toNonNegativeNumber(val, 0);
+            }
+            document.getElementById('tabelSapi').insertAdjacentHTML('beforeend', barisHewanHtml(namaHewan, jenis, daging));
         });
 
         // Restore distribusi rows
@@ -357,7 +391,12 @@ function saveData() {
     const sapi = [];
     document.querySelectorAll('#tabelSapi tr').forEach((row, i) => {
         if (i === 0) return;
-        sapi.push(row.querySelector('input').value || 0);
+        const namaHewan = row.querySelector('.hewan-nama').value.trim() || `Hewan ${i}`;
+        sapi.push({
+            nama: namaHewan,
+            jenis: row.querySelector('.hewan-jenis').value,
+            daging: row.querySelector('.hewan-daging').value || 0
+        });
     });
 
     const distribusi = [];
@@ -399,13 +438,14 @@ function downloadPDF() {
     let i = 1;
     document.querySelectorAll('#tabelSapi tr').forEach((row) => {
         if (i === 1) { i++; return; }
-        const input = row.querySelector('input');
-        const val = parseFloat(input.value) || 0;
+        const namaHewan = row.querySelector('.hewan-nama').value.trim() || `Hewan ${i - 1}`;
+        const jenis = row.querySelector('.hewan-jenis').value;
+        const val = parseFloat(row.querySelector('.hewan-daging').value) || 0;
         const est = row.querySelector('.est-g').textContent;
-        sapiRows += `<tr><td>Sapi ${i-1}</td><td>${val.toFixed(1)} kg</td><td>${est} kantong</td></tr>`;
+        sapiRows += `<tr><td>${escAttr(namaHewan)}</td><td>${jenis}</td><td>${val.toFixed(1)} kg</td><td>${est} kantong</td></tr>`;
         i++;
     });
-    sapiRows += `<tr class="total-row"><td>TOTAL</td><td>${total}</td><td>${jumlahSapi} ekor</td></tr>`;
+    sapiRows += `<tr class="total-row"><td colspan="2">TOTAL (${jumlahSapi} ekor)</td><td>${total}</td><td>-</td></tr>`;
 
     // Build distribusi rows
     let distRows = '';
@@ -444,10 +484,10 @@ th { background: #2c3e50; color: white; }
 <h2>AL-HIKMAH - ${today}</h2>
 
 <h3>1. DATA SAPI</h3>
-<table><tr><th>Sapi</th><th>Daging</th><th>Est. Gantingan</th></tr>${sapiRows}</table>
+<table><tr><th>Nama Hewan</th><th>Jenis</th><th>Daging</th><th>Est. Gantingan</th></tr>${sapiRows}</table>
 
 <h3>2. PESERTA QURBAN</h3>
-<div class="info">Total Peserta: <span>${pesertaOrang} orang</span> (1 sapi = 7 orang)</div>
+<div class="info">Total Porsi: <span>${pesertaOrang}</span> (sapi = 7 porsi, kambing/domba = 1 porsi)</div>
 <div class="info">Gantingan per Peserta: <span>${gantinganPerPeserta} kantong</span></div>
 <div class="info">Total Gantingan Peserta: <span>${pesertaG} kantong</span></div>
 <div class="info">Jatah Peserta: <span>${aktif ? 'Aktif (1/' + pembagi + ' dari total daging)' : 'Nonaktif'}</span></div>

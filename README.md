@@ -3,7 +3,7 @@
 Aplikasi statis (HTML murni, tanpa backend) untuk pengelolaan qurban Masjid Al-Hikmah:
 
 - **Kalkulator Daging** — perhitungan daging per sapi, peserta, jatah, dan isi per gantingan.
-- **Data Warga & Kupon** — data penerima, statistik per RT, cetak kupon qurban, daftar hadir, serta import/export data.
+- **Data Warga & Kupon** — data penerima (tambah, edit, hapus, duplikat otomatis dilewati), statistik per RT, cetak kupon qurban, daftar hadir, serta import/export data.
 
 ## Cara Menjalankan
 
@@ -38,7 +38,14 @@ Saat import, pilih **timpa** (ganti semua data lama) atau **gabung** (duplikat n
 
 ## Backup
 
-Gunakan tombol **Export** di halaman Data Warga untuk mengunduh seluruh data sebagai file JSON. Simpan file tersebut sebagai cadangan sebelum menghapus data atau mengganti perangkat.
+- Gunakan tombol **Export** untuk mengunduh seluruh data sebagai file JSON (format lengkap, siap di-import ulang).
+- Gunakan tombol **Excel** untuk mengunduh daftar warga kini (.xlsx) berisi kolom No, No Kupon, Nama, RT, dan Status Tukar — untuk laporan/arsip yang mudah dibuka.
+- Simpan file backup sebelum menghapus data atau mengganti perangkat.
+
+## Nomor Kupon & Status Tukar
+
+- Setiap warga mendapat nomor kupon permanen (`#001`, dst) yang tidak bergeser meski data berubah — aman untuk cetak ulang.
+- Centang kolom **Tukar** di tabel saat warga menukar kuponnya; kartu **Tukar Kupon** di panel statistik menampilkan ringkasan `sudah/total`.
 
 ## Struktur
 

@@ -191,6 +191,7 @@ td { padding: 10px 12px; text-align: left; font-size: 0.9em; }
     <button class="btn btn-nav active" onclick="location.href='warga.html'">👥 Data Warga & Kupon</button>
     <div class="nav-divider"></div>
     <button class="btn btn-nav outline" onclick="exportData()" title="Backup Data ke File">💾 Export</button>
+    <button class="btn btn-nav outline" onclick="exportExcel()" title="Export Daftar Warga ke Excel">📊 Excel</button>
     <button class="btn btn-nav outline" onclick="document.getElementById('importFile').click()" title="Import JSON / CSV / Excel">📥 Import</button>
     <button class="btn btn-nav outline" onclick="generateAttendanceList()">📋 Daftar Hadir</button>
     <button class="btn btn-nav" onclick="generateCoupons()">🎟️ Cetak Kupon</button>
@@ -202,7 +203,7 @@ td { padding: 10px 12px; text-align: left; font-size: 0.9em; }
   <!-- Kiri: Form Input -->
   <div class="panel">
     <div class="panel-header">
-      <h2>Tambah Penerima</h2>
+      <h2 id="formTitle">Tambah Penerima</h2>
     </div>
     <form id="wargaForm" onsubmit="event.preventDefault(); tambahWarga();">
       <div class="form-group">
@@ -214,6 +215,7 @@ td { padding: 10px 12px; text-align: left; font-size: 0.9em; }
         <input type="text" id="rt" placeholder="RT" required>
       </div>
       <button type="submit" class="btn btn-lg" style="width:100%; margin-top:10px;">Tambah Warga</button>
+      <button type="button" id="editBatal" class="btn btn-outline btn-lg" style="width:100%; margin-top:6px; display:none;" onclick="batalEdit()">Batal Edit</button>
     </form>
 
     <div class="panel-header" style="margin-top:25px;">
@@ -270,9 +272,11 @@ td { padding: 10px 12px; text-align: left; font-size: 0.9em; }
         <thead>
           <tr>
             <th width="50">No</th>
+            <th width="70">Kupon</th>
             <th>Nama Warga</th>
             <th width="100">RT</th>
-            <th width="80">Aksi</th>
+            <th width="60">Tukar</th>
+            <th width="110">Aksi</th>
           </tr>
         </thead>
         <tbody>
@@ -306,6 +310,7 @@ td { padding: 10px 12px; text-align: left; font-size: 0.9em; }
 <script>
 let daftarWarga = [];
 let idCounter = 0;
+let editingId = null;
 
 function esc(value) {
     const div = document.createElement('div');
@@ -392,6 +397,31 @@ function buildWargaKey(nama, rt) {
     return `${namaNorm}||${rtNorm}`;
 }
 
+function formatKupon(num) {
+    return '#' + String(num || 0).padStart(3, '0');
+}
+
+function sortWargaCopy(list) {
+    return [...(list || daftarWarga)].sort((a, b) => {
+        if (a.rt !== b.rt) return a.rt.localeCompare(b.rt, undefined, {numeric: true});
+        return a.nama.localeCompare(b.nama);
+    });
+}
+
+function ensureKuponNumbers() {
+    const needs = daftarWarga.filter(w => !Number.isInteger(w.noKupon) || w.noKupon < 1);
+    if (!needs.length) return false;
+    const used = daftarWarga.filter(w => Number.isInteger(w.noKupon) && w.noKupon >= 1).map(w => w.noKupon);
+    let next = Math.max(0, ...used) + 1;
+    sortWargaCopy(needs).forEach(w => { w.noKupon = next++; });
+    return true;
+}
+
+function nomorKuponBerikutnya() {
+    const used = daftarWarga.filter(w => Number.isInteger(w.noKupon) && w.noKupon >= 1).map(w => w.noKupon);
+    return Math.max(0, ...used) + 1;
+}
+
 function dedupeWargaList(rows) {
     const seen = new Set();
     const uniqueRows = [];
@@ -430,6 +460,9 @@ function loadData() {
             .filter(Boolean);
 
         daftarWarga = dedupeWargaList(normalized).uniqueRows;
+        if (ensureKuponNumbers()) {
+            localStorage.setItem('qurbanWarga', JSON.stringify(daftarWarga));
+        }
     } catch (err) {
         daftarWarga = [];
         showAlert(
@@ -443,11 +476,48 @@ function loadData() {
     }
 }
 
+// Simpan data ke localStorage (tanpa render ulang tabel, untuk toggle checkbox)
+function persistData() {
+    localStorage.setItem('qurbanWarga', JSON.stringify(daftarWarga));
+    renderStats();
+}
+
 // Simpan data ke localStorage
 function saveData() {
+    ensureKuponNumbers();
     localStorage.setItem('qurbanWarga', JSON.stringify(daftarWarga));
     renderTable();
     renderStats();
+}
+
+function cariWargaById(id) {
+    return daftarWarga.find(w => w.id === id);
+}
+
+function setFormEditMode(aktif) {
+    document.getElementById('formTitle').textContent = aktif ? 'Edit Penerima' : 'Tambah Penerima';
+    document.querySelector('#wargaForm button[type="submit"]').textContent = aktif ? 'Simpan Perubahan' : 'Tambah Warga';
+    document.getElementById('editBatal').style.display = aktif ? 'flex' : 'none';
+}
+
+function mulaiEdit(id) {
+    const warga = cariWargaById(id);
+    if (!warga) return;
+    editingId = id;
+    document.getElementById('nama').value = warga.nama;
+    document.getElementById('rt').value = warga.rt;
+    setFormEditMode(true);
+    const namaInput = document.getElementById('nama');
+    namaInput.focus();
+    namaInput.select();
+}
+
+function batalEdit() {
+    editingId = null;
+    setFormEditMode(false);
+    document.getElementById('nama').value = '';
+    document.getElementById('rt').value = '';
+    document.getElementById('nama').focus();
 }
 
 function tambahWarga() {
@@ -462,27 +532,54 @@ function tambahWarga() {
     }
 
     const newKey = buildWargaKey(nama, rt);
-    const exists = daftarWarga.some(w => buildWargaKey(w.nama, w.rt) === newKey);
+    const exists = daftarWarga.some(w => w.id !== editingId && buildWargaKey(w.nama, w.rt) === newKey);
     if (exists) {
         showAlert('Data duplikat: nama dan RT ini sudah ada.', 'Duplikat Terdeteksi');
         return;
     }
-    
+
+    if (editingId !== null) {
+        const warga = cariWargaById(editingId);
+        editingId = null;
+        setFormEditMode(false);
+        namaInput.value = '';
+        rtInput.value = '';
+        namaInput.focus();
+        if (!warga) {
+            showAlert('Data yang diedit tidak ditemukan lagi (kemungkinan berubah saat import/hapus).', 'Edit Dibatalkan');
+            saveData();
+            return;
+        }
+        warga.nama = nama;
+        warga.rt = rt;
+        saveData();
+        showAlert('Perubahan data warga telah disimpan.', 'Edit Berhasil');
+        return;
+    }
+
     daftarWarga.push({
         id: generateUniqueId(),
         nama,
-        rt
+        rt,
+        noKupon: nomorKuponBerikutnya(),
+        sudahTukar: false
     });
-    
+
     namaInput.value = '';
     namaInput.focus();
-    
+
     saveData();
 }
 
 function hapusWarga(id) {
     if(confirm('Hapus data warga ini?')) {
         daftarWarga = daftarWarga.filter(w => w.id !== id);
+        if (editingId === id) {
+            editingId = null;
+            setFormEditMode(false);
+            document.getElementById('nama').value = '';
+            document.getElementById('rt').value = '';
+        }
         saveData();
     }
 }
@@ -490,6 +587,8 @@ function hapusWarga(id) {
 function hapusSemua() {
     if(confirm('PERHATIAN: Hapus semua data warga?')) {
         daftarWarga = [];
+        editingId = null;
+        setFormEditMode(false);
         saveData();
     }
 }
@@ -504,17 +603,19 @@ function renderTable() {
         w.rt.toLowerCase().includes(keyword)
     );
 
-    const sorted = filtered.sort((a, b) => {
-        if (a.rt !== b.rt) return a.rt.localeCompare(b.rt, undefined, {numeric: true});
-        return a.nama.localeCompare(b.nama);
-    });
+    const sorted = sortWargaCopy(filtered);
 
     const rowsHtml = sorted.map((w, index) => `
-        <tr>
+        <tr style="${w.sudahTukar ? 'opacity:0.55;' : ''}">
             <td>${index + 1}</td>
+            <td style="font-weight:700; color:#a78bfa;">${esc(formatKupon(w.noKupon))}</td>
             <td style="font-weight:600;">${esc(w.nama.toUpperCase())}</td>
             <td><span class="badge-rt">RT ${esc(w.rt)}</span></td>
-            <td><button class="btn btn-danger" data-id="${escAttr(w.id)}" style="padding:4px 8px; font-size:0.8em;">×</button></td>
+            <td><input type="checkbox" data-tukar-id="${escAttr(w.id)}" ${w.sudahTukar ? 'checked' : ''} title="Sudah menukar kupon" style="width:16px; height:16px; accent-color:#34d399;"></td>
+            <td>
+                <button class="btn btn-outline" data-edit-id="${escAttr(w.id)}" title="Edit data warga" style="padding:4px 8px; font-size:0.8em;">✎</button>
+                <button class="btn btn-danger" data-id="${escAttr(w.id)}" title="Hapus data warga" style="padding:4px 8px; font-size:0.8em;">×</button>
+            </td>
         </tr>
     `).join('');
     tbody.innerHTML = rowsHtml;
@@ -523,15 +624,34 @@ function renderTable() {
 }
 
 document.querySelector('#tabelWarga tbody').addEventListener('click', function(event) {
+    const editBtn = event.target.closest('button[data-edit-id]');
+    if (editBtn) {
+        mulaiEdit(editBtn.dataset.editId);
+        return;
+    }
     const btn = event.target.closest('button[data-id]');
-    if (!btn) return;
-    hapusWarga(btn.dataset.id);
+    if (btn) hapusWarga(btn.dataset.id);
+});
+
+document.querySelector('#tabelWarga tbody').addEventListener('change', function(event) {
+    const cb = event.target.closest('input[data-tukar-id]');
+    if (!cb) return;
+    const warga = cariWargaById(cb.dataset.tukarId);
+    if (!warga) return;
+    warga.sudahTukar = cb.checked;
+    persistData();
 });
 
 function renderStats() {
     const statsContainer = document.getElementById('statsContainer');
-    statsContainer.innerHTML = '';
-    
+    const tukarCount = daftarWarga.filter(w => w.sudahTukar).length;
+    statsContainer.innerHTML = `
+        <div class="stat-card">
+            <span class="val">${tukarCount}/${daftarWarga.length}</span>
+            <span class="lbl">Tukar Kupon</span>
+        </div>
+    `;
+
     const rtCounts = {};
     daftarWarga.forEach(w => {
         rtCounts[w.rt] = (rtCounts[w.rt] || 0) + 1;
@@ -563,10 +683,7 @@ function generateCoupons() {
     const gap = parseInt(document.getElementById('kuponGap').value) || 2;
     const fontScale = (parseInt(document.getElementById('kuponFontSize').value) || 100) / 100;
     
-    const sorted = [...daftarWarga].sort((a, b) => {
-        if (a.rt !== b.rt) return a.rt.localeCompare(b.rt, undefined, {numeric: true});
-        return a.nama.localeCompare(b.nama);
-    });
+    const sorted = sortWargaCopy();
 
     const thn = new Date().getFullYear();
     const thnH = document.getElementById('tahunHijriah').value || '....';
@@ -591,7 +708,7 @@ function generateCoupons() {
                     <div class="watermark" style="font-size: ${20 * fontScale}px;">QURBAN</div>
                     <div class="coupon-header">
                         <div class="coupon-title" style="font-size:${8 * fontScale}px;">KUPON QURBAN</div>
-                        <div class="coupon-no" style="font-size:${10 * fontScale}px;">#${(j + 1).toString().padStart(3, '0')}</div>
+                        <div class="coupon-no" style="font-size:${10 * fontScale}px;">${esc(formatKupon(w.noKupon))}</div>
                     </div>
                     <div class="coupon-body" style="text-align:center;">
                         <div class="coupon-name" style="font-size:${11 * fontScale}px;">${esc(w.nama.toUpperCase())}</div>
@@ -634,10 +751,7 @@ function generateAttendanceList() {
     style.innerHTML = `@page { margin: 15mm 10mm !important; }`;
     document.head.appendChild(style);
 
-    const sorted = [...daftarWarga].sort((a, b) => {
-        if (a.rt !== b.rt) return a.rt.localeCompare(b.rt, undefined, {numeric: true});
-        return a.nama.localeCompare(b.nama);
-    });
+    const sorted = sortWargaCopy();
 
     const thn = new Date().getFullYear();
     const thnH = document.getElementById('tahunHijriah').value || '....';
@@ -648,7 +762,7 @@ function generateAttendanceList() {
         tableRows += `
             <tr>
                 <td style="text-align:center;">${index + 1}</td>
-                <td style="text-align:center;">#${(index + 1).toString().padStart(3, '0')}</td>
+                <td style="text-align:center;"><b>${esc(formatKupon(w.noKupon))}</b></td>
                 <td><b>${esc(w.nama.toUpperCase())}</b></td>
                 <td style="text-align:center;">RT ${esc(w.rt)}</td>
                 <td style="height:32px; width:170px; position:relative; font-size:9pt;">
@@ -718,6 +832,31 @@ function exportData() {
     linkElement.setAttribute('href', dataUri);
     linkElement.setAttribute('download', exportFileDefaultName);
     linkElement.click();
+}
+
+function exportExcel() {
+    if (daftarWarga.length === 0) {
+        showAlert('Tidak ada data untuk di-export.', 'Export Dibatalkan');
+        return;
+    }
+
+    const rows = sortWargaCopy().map((w, index) => [
+        index + 1,
+        formatKupon(w.noKupon),
+        w.nama,
+        w.rt,
+        w.sudahTukar ? 'Sudah' : 'Belum'
+    ]);
+
+    const worksheet = XLSX.utils.aoa_to_sheet([
+        ['No', 'No Kupon', 'Nama Warga', 'RT', 'Status Tukar'],
+        ...rows
+    ]);
+    worksheet['!cols'] = [{ wch: 5 }, { wch: 9 }, { wch: 28 }, { wch: 6 }, { wch: 12 }];
+
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Daftar Warga');
+    XLSX.writeFile(workbook, 'daftar_warga_qurban_' + new Date().toISOString().slice(0, 10) + '.xlsx');
 }
 
 function importData(input) {
