@@ -202,7 +202,7 @@ td { padding: 10px 12px; text-align: left; font-size: 0.9em; }
   <!-- Kiri: Form Input -->
   <div class="panel">
     <div class="panel-header">
-      <h2>Tambah Penerima</h2>
+      <h2 id="formTitle">Tambah Penerima</h2>
     </div>
     <form id="wargaForm" onsubmit="event.preventDefault(); tambahWarga();">
       <div class="form-group">
@@ -214,6 +214,7 @@ td { padding: 10px 12px; text-align: left; font-size: 0.9em; }
         <input type="text" id="rt" placeholder="RT" required>
       </div>
       <button type="submit" class="btn btn-lg" style="width:100%; margin-top:10px;">Tambah Warga</button>
+      <button type="button" id="editBatal" class="btn btn-outline btn-lg" style="width:100%; margin-top:6px; display:none;" onclick="batalEdit()">Batal Edit</button>
     </form>
 
     <div class="panel-header" style="margin-top:25px;">
@@ -272,7 +273,7 @@ td { padding: 10px 12px; text-align: left; font-size: 0.9em; }
             <th width="50">No</th>
             <th>Nama Warga</th>
             <th width="100">RT</th>
-            <th width="80">Aksi</th>
+            <th width="110">Aksi</th>
           </tr>
         </thead>
         <tbody>
@@ -306,6 +307,7 @@ td { padding: 10px 12px; text-align: left; font-size: 0.9em; }
 <script>
 let daftarWarga = [];
 let idCounter = 0;
+let editingId = null;
 
 function esc(value) {
     const div = document.createElement('div');
@@ -450,6 +452,36 @@ function saveData() {
     renderStats();
 }
 
+function cariWargaById(id) {
+    return daftarWarga.find(w => w.id === id);
+}
+
+function setFormEditMode(aktif) {
+    document.getElementById('formTitle').textContent = aktif ? 'Edit Penerima' : 'Tambah Penerima';
+    document.querySelector('#wargaForm button[type="submit"]').textContent = aktif ? 'Simpan Perubahan' : 'Tambah Warga';
+    document.getElementById('editBatal').style.display = aktif ? 'flex' : 'none';
+}
+
+function mulaiEdit(id) {
+    const warga = cariWargaById(id);
+    if (!warga) return;
+    editingId = id;
+    document.getElementById('nama').value = warga.nama;
+    document.getElementById('rt').value = warga.rt;
+    setFormEditMode(true);
+    const namaInput = document.getElementById('nama');
+    namaInput.focus();
+    namaInput.select();
+}
+
+function batalEdit() {
+    editingId = null;
+    setFormEditMode(false);
+    document.getElementById('nama').value = '';
+    document.getElementById('rt').value = '';
+    document.getElementById('nama').focus();
+}
+
 function tambahWarga() {
     const namaInput = document.getElementById('nama');
     const rtInput = document.getElementById('rt');
@@ -462,27 +494,52 @@ function tambahWarga() {
     }
 
     const newKey = buildWargaKey(nama, rt);
-    const exists = daftarWarga.some(w => buildWargaKey(w.nama, w.rt) === newKey);
+    const exists = daftarWarga.some(w => w.id !== editingId && buildWargaKey(w.nama, w.rt) === newKey);
     if (exists) {
         showAlert('Data duplikat: nama dan RT ini sudah ada.', 'Duplikat Terdeteksi');
         return;
     }
-    
+
+    if (editingId !== null) {
+        const warga = cariWargaById(editingId);
+        editingId = null;
+        setFormEditMode(false);
+        namaInput.value = '';
+        rtInput.value = '';
+        namaInput.focus();
+        if (!warga) {
+            showAlert('Data yang diedit tidak ditemukan lagi (kemungkinan berubah saat import/hapus).', 'Edit Dibatalkan');
+            saveData();
+            return;
+        }
+        warga.nama = nama;
+        warga.rt = rt;
+        saveData();
+        showAlert('Perubahan data warga telah disimpan.', 'Edit Berhasil');
+        return;
+    }
+
     daftarWarga.push({
         id: generateUniqueId(),
         nama,
         rt
     });
-    
+
     namaInput.value = '';
     namaInput.focus();
-    
+
     saveData();
 }
 
 function hapusWarga(id) {
     if(confirm('Hapus data warga ini?')) {
         daftarWarga = daftarWarga.filter(w => w.id !== id);
+        if (editingId === id) {
+            editingId = null;
+            setFormEditMode(false);
+            document.getElementById('nama').value = '';
+            document.getElementById('rt').value = '';
+        }
         saveData();
     }
 }
@@ -490,6 +547,8 @@ function hapusWarga(id) {
 function hapusSemua() {
     if(confirm('PERHATIAN: Hapus semua data warga?')) {
         daftarWarga = [];
+        editingId = null;
+        setFormEditMode(false);
         saveData();
     }
 }
@@ -514,7 +573,10 @@ function renderTable() {
             <td>${index + 1}</td>
             <td style="font-weight:600;">${esc(w.nama.toUpperCase())}</td>
             <td><span class="badge-rt">RT ${esc(w.rt)}</span></td>
-            <td><button class="btn btn-danger" data-id="${escAttr(w.id)}" style="padding:4px 8px; font-size:0.8em;">×</button></td>
+            <td>
+                <button class="btn btn-outline" data-edit-id="${escAttr(w.id)}" title="Edit data warga" style="padding:4px 8px; font-size:0.8em;">✎</button>
+                <button class="btn btn-danger" data-id="${escAttr(w.id)}" title="Hapus data warga" style="padding:4px 8px; font-size:0.8em;">×</button>
+            </td>
         </tr>
     `).join('');
     tbody.innerHTML = rowsHtml;
@@ -523,9 +585,13 @@ function renderTable() {
 }
 
 document.querySelector('#tabelWarga tbody').addEventListener('click', function(event) {
+    const editBtn = event.target.closest('button[data-edit-id]');
+    if (editBtn) {
+        mulaiEdit(editBtn.dataset.editId);
+        return;
+    }
     const btn = event.target.closest('button[data-id]');
-    if (!btn) return;
-    hapusWarga(btn.dataset.id);
+    if (btn) hapusWarga(btn.dataset.id);
 });
 
 function renderStats() {

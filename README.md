@@ -3,7 +3,7 @@
 Aplikasi statis (HTML murni, tanpa backend) untuk pengelolaan qurban Masjid Al-Hikmah:
 
 - **Kalkulator Daging** — perhitungan daging per sapi, peserta, jatah, dan isi per gantingan.
-- **Data Warga & Kupon** — data penerima, statistik per RT, cetak kupon qurban, daftar hadir, serta import/export data.
+- **Data Warga & Kupon** — data penerima (tambah, edit, hapus, duplikat otomatis dilewati), statistik per RT, cetak kupon qurban, daftar hadir, serta import/export data.
 
 ## Cara Menjalankan
 
