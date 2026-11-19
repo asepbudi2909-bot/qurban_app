@@ -85,7 +85,16 @@ td { padding: 10px 12px; text-align: left; font-size: 0.9em; }
   padding: 8px;
   border-radius: 6px;
   position: relative;
-  background: white;
+  background-color: white;
+  /* Ornamen sudut kupon (cetak hitam sederhana) */
+  background-image:
+    linear-gradient(#a08c4a, #a08c4a), linear-gradient(#a08c4a, #a08c4a),
+    linear-gradient(#a08c4a, #a08c4a), linear-gradient(#a08c4a, #a08c4a),
+    linear-gradient(#a08c4a, #a08c4a), linear-gradient(#a08c4a, #a08c4a),
+    linear-gradient(#a08c4a, #a08c4a), linear-gradient(#a08c4a, #a08c4a);
+  background-repeat: no-repeat;
+  background-size: 9px 1px, 1px 9px, 9px 1px, 1px 9px, 9px 1px, 1px 9px, 9px 1px, 1px 9px;
+  background-position: 3px 3px, 3px 3px, calc(100% - 3px) 3px, calc(100% - 3px) 3px, 3px calc(100% - 3px), 3px calc(100% - 3px), calc(100% - 3px) calc(100% - 3px), calc(100% - 3px) calc(100% - 3px);
   color: black;
   display: flex;
   flex-direction: column;
@@ -183,6 +192,8 @@ td { padding: 10px 12px; text-align: left; font-size: 0.9em; }
 </style>
 </head>
 <body>
+
+<div class="bismillah" dir="rtl" lang="ar" aria-hidden="true">بِسْمِ اللّٰهِ الرَّحْمٰنِ الرَّحِيْمِ</div>
 
 <header>
   <h1>👥 Penerima & Kupon Qurban</h1>

@@ -4,13 +4,25 @@
 
 body {
   font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-  background: linear-gradient(135deg, #071510 0%, #0a2018 50%, #0d2a20 100%);
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='56' viewBox='0 0 56 56'%3E%3Cg fill='none' stroke='%2310b981' stroke-opacity='0.05'%3E%3Cpath d='M28 6l5.5 16.5L50 28l-16.5 5.5L28 50l-5.5-16.5L6 28l16.5-5.5z'/%3E%3Ccircle cx='28' cy='28' r='7'/%3E%3Ccircle cx='0' cy='0' r='7'/%3E%3Ccircle cx='56' cy='0' r='7'/%3E%3Ccircle cx='0' cy='56' r='7'/%3E%3Ccircle cx='56' cy='56' r='7'/%3E%3C/g%3E%3C/svg%3E") repeat,
+    linear-gradient(135deg, #071510 0%, #0a2018 50%, #0d2a20 100%);
   color: #e0e0e0;
   min-height: 100vh;
   display: flex;
   flex-direction: column;
   padding: 12px;
   gap: 12px;
+}
+
+/* Bismillah di atas header */
+.bismillah {
+  text-align: center;
+  color: #e7c66b;
+  font-size: 1.15em;
+  line-height: 1.5;
+  text-shadow: 0 0 14px rgba(231, 198, 107, 0.3);
+  user-select: none;
 }
 
 /* Tombol (base — didefinisikan sebelum varian agar urutan cascade aman) */
@@ -73,6 +85,7 @@ header h1 { font-size: 1.2em; color: white; font-weight: 700; letter-spacing: 0.
 }
 
 .panel-header h2 { font-size: 0.9em; color: #e7c66b; text-transform: uppercase; letter-spacing: 1.2px; }
+.panel-header h2::after { content: " ✦"; color: #e7c66b; }
 
 /* Input */
 input[type="number"], input[type="text"], select {
@@ -105,6 +118,7 @@ tr:hover td { background: rgba(255,255,255,0.03); }
   border-radius: 8px;
   padding: 8px;
   text-align: center;
+  border-top: 2px solid rgba(231, 198, 107, 0.4);
 }
 
 /* Scrollbar */
