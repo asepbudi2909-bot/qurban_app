@@ -18,16 +18,6 @@ body {
   gap: 0.75rem;
 }
 
-/* Bismillah di atas header */
-.bismillah {
-  text-align: center;
-  color: #e7c66b;
-  font-size: 1.15em;
-  line-height: 1.5;
-  text-shadow: 0 0 14px rgba(231, 198, 107, 0.3);
-  user-select: none;
-}
-
 /* Tombol (base — didefinisikan sebelum varian agar urutan cascade aman) */
 .btn {
   background: linear-gradient(135deg, #10b981, #047857);
