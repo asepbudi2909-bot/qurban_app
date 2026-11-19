@@ -4,7 +4,7 @@
 
 body {
   font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-  background: linear-gradient(135deg, #0f0f1a 0%, #1a1a2e 50%, #16213e 100%);
+  background: linear-gradient(135deg, #071510 0%, #0a2018 50%, #0d2a20 100%);
   color: #e0e0e0;
   min-height: 100vh;
   display: flex;
@@ -15,7 +15,7 @@ body {
 
 /* Tombol (base — didefinisikan sebelum varian agar urutan cascade aman) */
 .btn {
-  background: linear-gradient(135deg, #667eea, #764ba2);
+  background: linear-gradient(135deg, #10b981, #047857);
   color: white;
   border: none;
   padding: 6px 12px;
@@ -26,21 +26,21 @@ body {
   transition: all 0.2s;
 }
 
-.btn:hover { transform: translateY(-1px); box-shadow: 0 3px 10px rgba(102, 126, 234, 0.4); }
-.btn-outline { background: transparent; border: 1px solid #667eea; color: #667eea; }
+.btn:hover { transform: translateY(-1px); box-shadow: 0 3px 10px rgba(16, 185, 129, 0.35); }
+.btn-outline { background: transparent; border: 1px solid #10b981; color: #10b981; }
 .btn-danger { background: linear-gradient(135deg, #ef4444, #dc2626); }
 .btn-lg { padding: 10px 15px; font-size: 0.9em; }
 
 /* Header & navigasi */
 header {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #10b981 0%, #047857 100%);
   padding: 12px 18px;
   border-radius: 12px;
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 14px;
-  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.35);
+  box-shadow: 0 6px 20px rgba(16, 185, 129, 0.35);
 }
 
 header h1 { font-size: 1.2em; color: white; font-weight: 700; letter-spacing: 0.3px; }
@@ -72,7 +72,7 @@ header h1 { font-size: 1.2em; color: white; font-weight: 700; letter-spacing: 0.
   border-bottom: 1px solid rgba(255,255,255,0.1);
 }
 
-.panel-header h2 { font-size: 0.9em; color: #a78bfa; text-transform: uppercase; letter-spacing: 1.2px; }
+.panel-header h2 { font-size: 0.9em; color: #e7c66b; text-transform: uppercase; letter-spacing: 1.2px; }
 
 /* Input */
 input[type="number"], input[type="text"], select {
@@ -82,7 +82,7 @@ input[type="number"], input[type="text"], select {
   border-radius: 8px;
 }
 
-input:focus { outline: none; border-color: #667eea; box-shadow: 0 0 6px rgba(102, 126, 234, 0.5); }
+input:focus { outline: none; border-color: #10b981; box-shadow: 0 0 6px rgba(16, 185, 129, 0.5); }
 
 /* Tabel */
 table { width: 100%; border-collapse: collapse; font-size: 0.85em; }
@@ -90,8 +90,8 @@ th {
   position: sticky;
   top: 0;
   z-index: 1;
-  background: #1a1a2e;
-  color: #a78bfa;
+  background: #09231b;
+  color: #e7c66b;
   padding: 8px 10px;
   font-weight: 600;
 }
@@ -111,4 +111,4 @@ tr:hover td { background: rgba(255,255,255,0.03); }
 .table-wrap::-webkit-scrollbar,
 .table-container::-webkit-scrollbar { width: 5px; }
 .table-wrap::-webkit-scrollbar-thumb,
-.table-container::-webkit-scrollbar-thumb { background: rgba(102, 126, 234, 0.5); border-radius: 3px; }
+.table-container::-webkit-scrollbar-thumb { background: rgba(16, 185, 129, 0.5); border-radius: 3px; }
