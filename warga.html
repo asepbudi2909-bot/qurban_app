@@ -385,6 +385,21 @@ tr:hover td { background: rgba(255,255,255,0.03); }
 let daftarWarga = [];
 let idCounter = 0;
 
+function esc(value) {
+    const div = document.createElement('div');
+    div.textContent = String(value ?? '');
+    return div.innerHTML;
+}
+
+function escAttr(value) {
+    return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+}
+
 function generateUniqueId() {
     idCounter += 1;
     return `${Date.now()}-${idCounter}-${Math.random().toString(36).slice(2, 8)}`;
@@ -538,7 +553,6 @@ function tambahWarga() {
     });
     
     namaInput.value = '';
-    rtInput.value = rtInput.value; // Biarkan RT tetap untuk input massal per RT
     namaInput.focus();
     
     saveData();
@@ -576,15 +590,21 @@ function renderTable() {
     const rowsHtml = sorted.map((w, index) => `
         <tr>
             <td>${index + 1}</td>
-            <td style="font-weight:600;">${w.nama.toUpperCase()}</td>
-            <td><span class="badge-rt">RT ${w.rt}</span></td>
-            <td><button class="btn btn-danger" onclick='hapusWarga(${JSON.stringify(String(w.id))})' style="padding:4px 8px; font-size:0.8em;">×</button></td>
+            <td style="font-weight:600;">${esc(w.nama.toUpperCase())}</td>
+            <td><span class="badge-rt">RT ${esc(w.rt)}</span></td>
+            <td><button class="btn btn-danger" data-id="${escAttr(w.id)}" style="padding:4px 8px; font-size:0.8em;">×</button></td>
         </tr>
     `).join('');
     tbody.innerHTML = rowsHtml;
-    
+
     document.getElementById('totalWarga').textContent = daftarWarga.length;
 }
+
+document.querySelector('#tabelWarga tbody').addEventListener('click', function(event) {
+    const btn = event.target.closest('button[data-id]');
+    if (!btn) return;
+    hapusWarga(btn.dataset.id);
+});
 
 function renderStats() {
     const statsContainer = document.getElementById('statsContainer');
@@ -601,7 +621,7 @@ function renderStats() {
         const card = `
             <div class="stat-card">
                 <span class="val">${rtCounts[rt]}</span>
-                <span class="lbl">RT ${rt}</span>
+                <span class="lbl">RT ${esc(rt)}</span>
             </div>
         `;
         statsContainer.insertAdjacentHTML('beforeend', card);
@@ -650,8 +670,8 @@ function generateCoupons() {
                         <div class="coupon-no" style="font-size:${10 * fontScale}px;">#${(j + 1).toString().padStart(3, '0')}</div>
                     </div>
                     <div class="coupon-body" style="text-align:center;">
-                        <div class="coupon-name" style="font-size:${11 * fontScale}px;">${w.nama.toUpperCase()}</div>
-                        <div class="coupon-address" style="font-size:${8 * fontScale}px;">RT ${w.rt}</div>
+                        <div class="coupon-name" style="font-size:${11 * fontScale}px;">${esc(w.nama.toUpperCase())}</div>
+                        <div class="coupon-address" style="font-size:${8 * fontScale}px;">RT ${esc(w.rt)}</div>
                     </div>
                     <div class="coupon-footer" style="font-size:${7 * fontScale}px;">
                         <div>AL-HIKMAH - ${thnH} H</div>
@@ -705,8 +725,8 @@ function generateAttendanceList() {
             <tr>
                 <td style="text-align:center;">${index + 1}</td>
                 <td style="text-align:center;">#${(index + 1).toString().padStart(3, '0')}</td>
-                <td><b>${w.nama.toUpperCase()}</b></td>
-                <td style="text-align:center;">RT ${w.rt}</td>
+                <td><b>${esc(w.nama.toUpperCase())}</b></td>
+                <td style="text-align:center;">RT ${esc(w.rt)}</td>
                 <td style="height:32px; width:170px; position:relative; font-size:9pt;">
                     <span style="position:absolute; left:4px; top:4px; opacity:0.6;">${index + 1}.</span>
                     <div style="border-bottom:0.8px dotted #888; width:78%; margin:20px auto 0 auto;"></div>
