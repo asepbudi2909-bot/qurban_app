@@ -659,7 +659,9 @@ function generateCoupons() {
     const singleCouponHeight = Math.floor((availableHeight - (gap * (rows - 1))) / rows);
 
     for (let i = 0; i < sorted.length; i += itemsPerPage) {
-        let pageHtml = `<div style="display:grid; grid-template-columns: repeat(${cols}, 1fr); grid-template-rows: repeat(${rows}, ${singleCouponHeight}mm); gap: ${gap}mm; padding: ${margin}mm; width: 210mm; height: 297mm; box-sizing: border-box; break-after: page; page-break-after: always; background:white;">`;
+        const hasMorePages = i + itemsPerPage < sorted.length;
+        const pageBreak = hasMorePages ? ' break-after: page; page-break-after: always;' : '';
+        let pageHtml = `<div style="display:grid; grid-template-columns: repeat(${cols}, 1fr); grid-template-rows: repeat(${rows}, ${singleCouponHeight}mm); gap: ${gap}mm; padding: ${margin}mm; width: 210mm; height: 297mm; box-sizing: border-box;${pageBreak} background:white;">`;
         for (let j = i; j < i + itemsPerPage && j < sorted.length; j++) {
             const w = sorted[j];
             pageHtml += `
