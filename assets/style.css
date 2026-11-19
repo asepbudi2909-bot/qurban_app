@@ -13,6 +13,24 @@ body {
   gap: 12px;
 }
 
+/* Tombol (base — didefinisikan sebelum varian agar urutan cascade aman) */
+.btn {
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.8em;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+
+.btn:hover { transform: translateY(-1px); box-shadow: 0 3px 10px rgba(102, 126, 234, 0.4); }
+.btn-outline { background: transparent; border: 1px solid #667eea; color: #667eea; }
+.btn-danger { background: linear-gradient(135deg, #ef4444, #dc2626); }
+.btn-lg { padding: 10px 15px; font-size: 0.9em; }
+
 /* Header & navigasi */
 header {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -55,24 +73,6 @@ header h1 { font-size: 1.2em; color: white; font-weight: 700; letter-spacing: 0.
 }
 
 .panel-header h2 { font-size: 0.9em; color: #a78bfa; text-transform: uppercase; letter-spacing: 1.2px; }
-
-/* Tombol */
-.btn {
-  background: linear-gradient(135deg, #667eea, #764ba2);
-  color: white;
-  border: none;
-  padding: 6px 12px;
-  border-radius: 8px;
-  cursor: pointer;
-  font-size: 0.8em;
-  font-weight: 600;
-  transition: all 0.2s;
-}
-
-.btn:hover { transform: translateY(-1px); box-shadow: 0 3px 10px rgba(102, 126, 234, 0.4); }
-.btn-outline { background: transparent; border: 1px solid #667eea; color: #667eea; }
-.btn-danger { background: linear-gradient(135deg, #ef4444, #dc2626); }
-.btn-lg { padding: 10px 15px; font-size: 0.9em; }
 
 /* Input */
 input[type="number"], input[type="text"], select {
