@@ -38,7 +38,14 @@ Saat import, pilih **timpa** (ganti semua data lama) atau **gabung** (duplikat n
 
 ## Backup
 
-Gunakan tombol **Export** di halaman Data Warga untuk mengunduh seluruh data sebagai file JSON. Simpan file tersebut sebagai cadangan sebelum menghapus data atau mengganti perangkat.
+- Gunakan tombol **Export** untuk mengunduh seluruh data sebagai file JSON (format lengkap, siap di-import ulang).
+- Gunakan tombol **Excel** untuk mengunduh daftar warga kini (.xlsx) berisi kolom No, No Kupon, Nama, RT, dan Status Tukar — untuk laporan/arsip yang mudah dibuka.
+- Simpan file backup sebelum menghapus data atau mengganti perangkat.
+
+## Nomor Kupon & Status Tukar
+
+- Setiap warga mendapat nomor kupon permanen (`#001`, dst) yang tidak bergeser meski data berubah — aman untuk cetak ulang.
+- Centang kolom **Tukar** di tabel saat warga menukar kuponnya; kartu **Tukar Kupon** di panel statistik menampilkan ringkasan `sudah/total`.
 
 ## Struktur
 

@@ -191,6 +191,7 @@ td { padding: 10px 12px; text-align: left; font-size: 0.9em; }
     <button class="btn btn-nav active" onclick="location.href='warga.html'">👥 Data Warga & Kupon</button>
     <div class="nav-divider"></div>
     <button class="btn btn-nav outline" onclick="exportData()" title="Backup Data ke File">💾 Export</button>
+    <button class="btn btn-nav outline" onclick="exportExcel()" title="Export Daftar Warga ke Excel">📊 Excel</button>
     <button class="btn btn-nav outline" onclick="document.getElementById('importFile').click()" title="Import JSON / CSV / Excel">📥 Import</button>
     <button class="btn btn-nav outline" onclick="generateAttendanceList()">📋 Daftar Hadir</button>
     <button class="btn btn-nav" onclick="generateCoupons()">🎟️ Cetak Kupon</button>
@@ -271,8 +272,10 @@ td { padding: 10px 12px; text-align: left; font-size: 0.9em; }
         <thead>
           <tr>
             <th width="50">No</th>
+            <th width="70">Kupon</th>
             <th>Nama Warga</th>
             <th width="100">RT</th>
+            <th width="60">Tukar</th>
             <th width="110">Aksi</th>
           </tr>
         </thead>
@@ -394,6 +397,31 @@ function buildWargaKey(nama, rt) {
     return `${namaNorm}||${rtNorm}`;
 }
 
+function formatKupon(num) {
+    return '#' + String(num || 0).padStart(3, '0');
+}
+
+function sortWargaCopy(list) {
+    return [...(list || daftarWarga)].sort((a, b) => {
+        if (a.rt !== b.rt) return a.rt.localeCompare(b.rt, undefined, {numeric: true});
+        return a.nama.localeCompare(b.nama);
+    });
+}
+
+function ensureKuponNumbers() {
+    const needs = daftarWarga.filter(w => !Number.isInteger(w.noKupon) || w.noKupon < 1);
+    if (!needs.length) return false;
+    const used = daftarWarga.filter(w => Number.isInteger(w.noKupon) && w.noKupon >= 1).map(w => w.noKupon);
+    let next = Math.max(0, ...used) + 1;
+    sortWargaCopy(needs).forEach(w => { w.noKupon = next++; });
+    return true;
+}
+
+function nomorKuponBerikutnya() {
+    const used = daftarWarga.filter(w => Number.isInteger(w.noKupon) && w.noKupon >= 1).map(w => w.noKupon);
+    return Math.max(0, ...used) + 1;
+}
+
 function dedupeWargaList(rows) {
     const seen = new Set();
     const uniqueRows = [];
@@ -432,6 +460,9 @@ function loadData() {
             .filter(Boolean);
 
         daftarWarga = dedupeWargaList(normalized).uniqueRows;
+        if (ensureKuponNumbers()) {
+            localStorage.setItem('qurbanWarga', JSON.stringify(daftarWarga));
+        }
     } catch (err) {
         daftarWarga = [];
         showAlert(
@@ -445,8 +476,15 @@ function loadData() {
     }
 }
 
+// Simpan data ke localStorage (tanpa render ulang tabel, untuk toggle checkbox)
+function persistData() {
+    localStorage.setItem('qurbanWarga', JSON.stringify(daftarWarga));
+    renderStats();
+}
+
 // Simpan data ke localStorage
 function saveData() {
+    ensureKuponNumbers();
     localStorage.setItem('qurbanWarga', JSON.stringify(daftarWarga));
     renderTable();
     renderStats();
@@ -522,7 +560,9 @@ function tambahWarga() {
     daftarWarga.push({
         id: generateUniqueId(),
         nama,
-        rt
+        rt,
+        noKupon: nomorKuponBerikutnya(),
+        sudahTukar: false
     });
 
     namaInput.value = '';
@@ -563,16 +603,15 @@ function renderTable() {
         w.rt.toLowerCase().includes(keyword)
     );
 
-    const sorted = filtered.sort((a, b) => {
-        if (a.rt !== b.rt) return a.rt.localeCompare(b.rt, undefined, {numeric: true});
-        return a.nama.localeCompare(b.nama);
-    });
+    const sorted = sortWargaCopy(filtered);
 
     const rowsHtml = sorted.map((w, index) => `
-        <tr>
+        <tr style="${w.sudahTukar ? 'opacity:0.55;' : ''}">
             <td>${index + 1}</td>
+            <td style="font-weight:700; color:#a78bfa;">${esc(formatKupon(w.noKupon))}</td>
             <td style="font-weight:600;">${esc(w.nama.toUpperCase())}</td>
             <td><span class="badge-rt">RT ${esc(w.rt)}</span></td>
+            <td><input type="checkbox" data-tukar-id="${escAttr(w.id)}" ${w.sudahTukar ? 'checked' : ''} title="Sudah menukar kupon" style="width:16px; height:16px; accent-color:#34d399;"></td>
             <td>
                 <button class="btn btn-outline" data-edit-id="${escAttr(w.id)}" title="Edit data warga" style="padding:4px 8px; font-size:0.8em;">✎</button>
                 <button class="btn btn-danger" data-id="${escAttr(w.id)}" title="Hapus data warga" style="padding:4px 8px; font-size:0.8em;">×</button>
@@ -594,10 +633,25 @@ document.querySelector('#tabelWarga tbody').addEventListener('click', function(e
     if (btn) hapusWarga(btn.dataset.id);
 });
 
+document.querySelector('#tabelWarga tbody').addEventListener('change', function(event) {
+    const cb = event.target.closest('input[data-tukar-id]');
+    if (!cb) return;
+    const warga = cariWargaById(cb.dataset.tukarId);
+    if (!warga) return;
+    warga.sudahTukar = cb.checked;
+    persistData();
+});
+
 function renderStats() {
     const statsContainer = document.getElementById('statsContainer');
-    statsContainer.innerHTML = '';
-    
+    const tukarCount = daftarWarga.filter(w => w.sudahTukar).length;
+    statsContainer.innerHTML = `
+        <div class="stat-card">
+            <span class="val">${tukarCount}/${daftarWarga.length}</span>
+            <span class="lbl">Tukar Kupon</span>
+        </div>
+    `;
+
     const rtCounts = {};
     daftarWarga.forEach(w => {
         rtCounts[w.rt] = (rtCounts[w.rt] || 0) + 1;
@@ -629,10 +683,7 @@ function generateCoupons() {
     const gap = parseInt(document.getElementById('kuponGap').value) || 2;
     const fontScale = (parseInt(document.getElementById('kuponFontSize').value) || 100) / 100;
     
-    const sorted = [...daftarWarga].sort((a, b) => {
-        if (a.rt !== b.rt) return a.rt.localeCompare(b.rt, undefined, {numeric: true});
-        return a.nama.localeCompare(b.nama);
-    });
+    const sorted = sortWargaCopy();
 
     const thn = new Date().getFullYear();
     const thnH = document.getElementById('tahunHijriah').value || '....';
@@ -657,7 +708,7 @@ function generateCoupons() {
                     <div class="watermark" style="font-size: ${20 * fontScale}px;">QURBAN</div>
                     <div class="coupon-header">
                         <div class="coupon-title" style="font-size:${8 * fontScale}px;">KUPON QURBAN</div>
-                        <div class="coupon-no" style="font-size:${10 * fontScale}px;">#${(j + 1).toString().padStart(3, '0')}</div>
+                        <div class="coupon-no" style="font-size:${10 * fontScale}px;">${esc(formatKupon(w.noKupon))}</div>
                     </div>
                     <div class="coupon-body" style="text-align:center;">
                         <div class="coupon-name" style="font-size:${11 * fontScale}px;">${esc(w.nama.toUpperCase())}</div>
@@ -700,10 +751,7 @@ function generateAttendanceList() {
     style.innerHTML = `@page { margin: 15mm 10mm !important; }`;
     document.head.appendChild(style);
 
-    const sorted = [...daftarWarga].sort((a, b) => {
-        if (a.rt !== b.rt) return a.rt.localeCompare(b.rt, undefined, {numeric: true});
-        return a.nama.localeCompare(b.nama);
-    });
+    const sorted = sortWargaCopy();
 
     const thn = new Date().getFullYear();
     const thnH = document.getElementById('tahunHijriah').value || '....';
@@ -714,7 +762,7 @@ function generateAttendanceList() {
         tableRows += `
             <tr>
                 <td style="text-align:center;">${index + 1}</td>
-                <td style="text-align:center;">#${(index + 1).toString().padStart(3, '0')}</td>
+                <td style="text-align:center;"><b>${esc(formatKupon(w.noKupon))}</b></td>
                 <td><b>${esc(w.nama.toUpperCase())}</b></td>
                 <td style="text-align:center;">RT ${esc(w.rt)}</td>
                 <td style="height:32px; width:170px; position:relative; font-size:9pt;">
@@ -784,6 +832,31 @@ function exportData() {
     linkElement.setAttribute('href', dataUri);
     linkElement.setAttribute('download', exportFileDefaultName);
     linkElement.click();
+}
+
+function exportExcel() {
+    if (daftarWarga.length === 0) {
+        showAlert('Tidak ada data untuk di-export.', 'Export Dibatalkan');
+        return;
+    }
+
+    const rows = sortWargaCopy().map((w, index) => [
+        index + 1,
+        formatKupon(w.noKupon),
+        w.nama,
+        w.rt,
+        w.sudahTukar ? 'Sudah' : 'Belum'
+    ]);
+
+    const worksheet = XLSX.utils.aoa_to_sheet([
+        ['No', 'No Kupon', 'Nama Warga', 'RT', 'Status Tukar'],
+        ...rows
+    ]);
+    worksheet['!cols'] = [{ wch: 5 }, { wch: 9 }, { wch: 28 }, { wch: 6 }, { wch: 12 }];
+
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Daftar Warga');
+    XLSX.writeFile(workbook, 'daftar_warga_qurban_' + new Date().toISOString().slice(0, 10) + '.xlsx');
 }
 
 function importData(input) {
