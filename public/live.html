@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Live Counter Tukar Kupon Qurban AL-HIKMAH</title>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="assets/firebase-config.js"></script>
+<script src="assets/store.js"></script>
+<link rel="stylesheet" href="assets/style.css">
+<style>
+.container-live {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr;
+  gap: 0.9375rem;
+  flex: 1;
+}
+
+@media (max-width: 860px) {
+  .container-live { grid-template-columns: 1fr; }
+}
+
+.live-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
+}
+
+.kartu-besar {
+  padding: 18px;
+  text-align: center;
+  border: 1px solid rgba(255,255,255,0.12);
+}
+
+.kartu-besar .angka {
+  display: block;
+  font-size: 3.2em;
+  font-weight: 800;
+  line-height: 1.1;
+  color: #34d399;
+  font-variant-numeric: tabular-nums;
+}
+
+.kartu-besar .label {
+  display: block;
+  margin-top: 4px;
+  font-size: 0.75em;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #8aa196;
+}
+
+.kartu-besar.utama {
+  border-color: rgba(52, 211, 153, 0.5);
+  background: linear-gradient(160deg, rgba(9, 45, 33, 0.96), rgba(16, 70, 48, 0.96));
+}
+
+.kartu-besar.netral .angka { color: #e5e7eb; }
+.kartu-besar.sisa .angka { color: #e7c66b; }
+
+.progress-wrap {
+  margin-top: 14px;
+  background: rgba(255,255,255,0.08);
+  border-radius: 999px;
+  height: 18px;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,0.12);
+}
+
+.progress-fill {
+  height: 100%;
+  width: 0%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #10b981, #34d399);
+  transition: width 0.6s ease;
+}
+
+.progress-label {
+  margin-top: 6px;
+  font-size: 0.85em;
+  color: #8aa196;
+  display: flex;
+  justify-content: space-between;
+}
+
+.status-live {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.75em;
+  font-weight: 700;
+  color: #34d399;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.status-live::before {
+  content: '';
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #34d399;
+  animation: denyut 1.4s ease infinite;
+}
+
+.status-live.putus { color: #f87171; }
+.status-live.putus::before { background: #f87171; animation: none; }
+
+@keyframes denyut {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.25; }
+}
+
+.waktu-terima {
+  font-size: 0.72em;
+  color: #6b7f74;
+}
+
+.rt-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.rt-kartu {
+  padding: 8px;
+  text-align: center;
+  border-radius: 8px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.08);
+}
+
+.rt-kartu .v { display: block; font-weight: 700; color: #6ee7b7; font-variant-numeric: tabular-nums; }
+.rt-kartu .l { font-size: 0.72em; color: #8aa196; }
+
+.riwayat-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.riwayat-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: linear-gradient(160deg, rgba(9, 35, 27, 0.96), rgba(13, 42, 32, 0.96));
+  border: 1px solid rgba(52, 211, 153, 0.25);
+  animation: masuk 0.35s ease;
+}
+
+@keyframes masuk {
+  from { transform: translateY(-6px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.riwayat-item .nama {
+  font-weight: 700;
+  color: #e5e7eb;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.riwayat-item .kupon { color: #e7c66b; font-weight: 800; white-space: nowrap; }
+.riwayat-item .jam { color: #6b7f74; font-size: 0.8em; white-space: nowrap; }
+
+.kosong-note {
+  color: #6b7f74;
+  font-size: 0.85em;
+  text-align: center;
+  padding: 18px 8px;
+}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>📺 Live — Tukar Kupon</h1>
+  <div class="nav-group">
+    <button class="btn btn-nav outline" onclick="location.href='index.html'">📊 Kalkulator Daging</button>
+    <button class="btn btn-nav outline" onclick="location.href='warga.html'">👥 Data Warga & Kupon</button>
+    <button class="btn btn-nav outline" onclick="location.href='scanner.html'">📷‍ Scan QR</button>
+    <div class="nav-divider"></div>
+    <button class="btn btn-nav active" onclick="location.href='live.html'">📺 Live</button>
+  </div>
+</header>
+
+<div class="container-live">
+  <div class="panel">
+    <div class="panel-header" style="display:flex; justify-content:space-between; align-items:center;">
+      <h2>Papan Counter</h2>
+      <span class="status-live" id="statusLive">Menghubungkan...</span>
+    </div>
+    <div class="live-grid">
+      <div class="stat-card kartu-besar utama">
+        <span class="angka" id="angkaSudah">0</span>
+        <span class="label">Sudah Tukar</span>
+      </div>
+      <div class="stat-card kartu-besar netral">
+        <span class="angka" id="angkaTotal">0</span>
+        <span class="label">Total Warga</span>
+      </div>
+      <div class="stat-card kartu-besar sisa">
+        <span class="angka" id="angkaSisa">0</span>
+        <span class="label">Belum Tukar</span>
+      </div>
+    </div>
+    <div class="progress-wrap">
+      <div class="progress-fill" id="progressFill"></div>
+    </div>
+    <div class="progress-label">
+      <span id="progresPct">0%</span>
+      <span class="waktu-terima" id="waktuTerima"></span>
+    </div>
+    <div class="rt-grid" id="rtGrid"></div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-header">
+      <h2>Tukar Terbaru</h2>
+    </div>
+    <div class="riwayat-list" id="riwayatList">
+      <div class="kosong-note">Belum ada penukaran yang tercatat.</div>
+    </div>
+  </div>
+</div>
+
+<script>
+function esc(value) {
+    const div = document.createElement('div');
+    div.textContent = String(value ?? '');
+    return div.innerHTML;
+}
+
+function escAttr(value) {
+    return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+}
+
+function formatKupon(num) {
+    return '#' + String(num || 0).padStart(3, '0');
+}
+
+function setStatusLive(aktif, teks) {
+    const el = document.getElementById('statusLive');
+    el.className = 'status-live' + (aktif ? '' : ' putus');
+    el.textContent = teks;
+}
+
+function render(rows) {
+    const total = rows.length;
+    const sudah = rows.filter(w => w.sudahTukar).length;
+    const sisa = total - sudah;
+    const persen = total ? Math.round((sudah / total) * 100) : 0;
+
+    document.getElementById('angkaSudah').textContent = sudah;
+    document.getElementById('angkaTotal').textContent = total;
+    document.getElementById('angkaSisa').textContent = sisa;
+    document.getElementById('progressFill').style.width = persen + '%';
+    document.getElementById('progresPct').textContent = `${persen}% (${sudah} dari ${total})`;
+    document.getElementById('waktuTerima').textContent =
+        'Diperbarui: ' + new Date().toLocaleTimeString('id-ID');
+
+    const rtGrid = document.getElementById('rtGrid');
+    const perRt = {};
+    rows.forEach(w => {
+        perRt[w.rt] = perRt[w.rt] || { total: 0, sudah: 0 };
+        perRt[w.rt].total++;
+        if (w.sudahTukar) perRt[w.rt].sudah++;
+    });
+    rtGrid.innerHTML = Object.keys(perRt)
+        .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))
+        .map(rt => {
+            const s = perRt[rt];
+            const selesai = s.sudah >= s.total && s.total > 0;
+            return `
+                <div class="rt-kartu" ${selesai ? 'style="border-color:rgba(52,211,153,0.55);"' : ''}>
+                    <span class="v">${s.sudah}/${s.total}</span>
+                    <span class="l">RT ${esc(rt)}${selesai ? ' ✔' : ''}</span>
+                </div>
+            `;
+        }).join('');
+
+    const riwayat = rows
+        .filter(w => w.sudahTukar && Number.isFinite(w.waktuTukar))
+        .sort((a, b) => b.waktuTukar - a.waktuTukar)
+        .slice(0, 10);
+    const listEl = document.getElementById('riwayatList');
+    if (!riwayat.length) {
+        listEl.innerHTML = `<div class="kosong-note">Belum ada penukaran yang tercatat.</div>`;
+    } else {
+        listEl.innerHTML = riwayat.map(w => `
+            <div class="riwayat-item">
+                <span class="nama">${esc(w.nama.toUpperCase())} — RT ${escAttr(w.rt)}</span>
+                <span class="kupon">${esc(formatKupon(w.noKupon))}</span>
+                <span class="jam">${esc(new Date(w.waktuTukar).toLocaleTimeString('id-ID'))}</span>
+            </div>
+        `).join('');
+    }
+}
+
+function mulaiLive() {
+    if (!QurbanStore.konfigurasiLengkap()) {
+        setStatusLive(false, 'Konfigurasi belum diisi');
+        document.getElementById('riwayatList').innerHTML =
+            `<div class="kosong-note">${esc(QurbanStore.pesananKonfigurasi())}</div>`;
+        return;
+    }
+
+    QurbanStore.dengarkan((rows) => {
+        setStatusLive(true, 'LIVE');
+        render(rows);
+    }, (err) => {
+        setStatusLive(false, 'Terputus');
+        document.getElementById('riwayatList').innerHTML =
+            `<div class="kosong-note">Koneksi ke Firestore gagal: ${esc(String(err?.message || err))}</div>`;
+    });
+}
+
+mulaiLive();
+</script>
+
+</body>
+</html>

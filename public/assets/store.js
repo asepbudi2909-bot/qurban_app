@@ -46,7 +46,8 @@ const QurbanStore = (function () {
             nama: String(data.nama || ''),
             rt: String(data.rt || ''),
             noKupon: Number.isInteger(data.noKupon) && data.noKupon >= 1 ? data.noKupon : 0,
-            sudahTukar: data.sudahTukar === true
+            sudahTukar: data.sudahTukar === true,
+            waktuTukar: typeof data.waktuTukar === 'number' ? data.waktuTukar : null
         };
     }
 
@@ -60,6 +61,20 @@ const QurbanStore = (function () {
     async function muatSemua() {
         const snapshot = await siap().collection(KOLEKSI).get();
         return snapshot.docs.map(normalisasiDoc);
+    }
+
+    // Langganan realtime: callback dipanggil tiap perubahan data.
+    // Return unsubscribe() untuk menghentikan langganan.
+    function dengarkan(onData, onGalat) {
+        try {
+            return siap().collection(KOLEKSI).onSnapshot(
+                (snapshot) => onData(snapshot.docs.map(normalisasiDoc)),
+                (err) => { if (onGalat) onGalat(err); }
+            );
+        } catch (err) {
+            if (onGalat) onGalat(err);
+            return () => {};
+        }
     }
 
     async function tambah(nama, rt) {
@@ -102,7 +117,13 @@ const QurbanStore = (function () {
     async function setTukar(id, nilai) {
         const store = siap();
         const ref = store.collection(KOLEKSI).doc(id);
-        await ref.update({ sudahTukar: nilai === true });
+        const patch = { sudahTukar: nilai === true };
+        if (nilai === true) {
+            patch.waktuTukar = Date.now();
+        } else {
+            patch.waktuTukar = firebase.firestore.FieldValue.delete();
+        }
+        await ref.update(patch);
         const doc = await ref.get();
         if (!doc.exists) throw new Error('Data warga tidak ditemukan.');
         return normalisasiDoc(doc);
@@ -175,6 +196,7 @@ const QurbanStore = (function () {
                 noKupon: w.noKupon,
                 sudahTukar: w.sudahTukar === true
             };
+            if (Number.isFinite(w.waktuTukar)) kolom.waktuTukar = w.waktuTukar;
             const ref = w.id ? store.collection(KOLEKSI).doc(w.id) : store.collection(KOLEKSI).doc();
             ops.push({ tipe: 'set', ref, data: kolom });
         });
@@ -219,6 +241,7 @@ const QurbanStore = (function () {
         konfigurasiLengkap,
         pesananKonfigurasi,
         muatSemua,
+        dengarkan,
         tambah,
         ubah,
         setTukar,

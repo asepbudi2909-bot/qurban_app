@@ -211,6 +211,7 @@ td { padding: 0.625rem 0.75rem; text-align: left; font-size: 0.9em; }
     <button class="btn btn-nav outline" onclick="document.getElementById('importFile').click()" title="Import JSON / CSV / Excel">📥 Import</button>
     <button class="btn btn-nav outline" onclick="generateAttendanceList()">📋 Daftar Hadir</button>
     <button class="btn btn-nav outline" onclick="location.href='scanner.html'" title="Scan QR kupon untuk verifikasi tukar">📷‍ Scan QR</button>
+    <button class="btn btn-nav outline" onclick="location.href='live.html'" title="Papan counter live tukar kupon">📺 Live</button>
     <button class="btn btn-nav" onclick="generateCoupons()">🎟️ Cetak Kupon</button>
     <input type="file" id="importFile" style="display:none" accept=".json,.csv,.xls,.xlsx" onchange="importData(this)">
   </div>
@@ -433,14 +434,10 @@ function tampilkanGalatServer(err, konteks) {
     );
 }
 
-// Muat data dari Firestore (dengan migrasi otomatis dari localStorage lama)
+// Muat data sekali dari Firestore (contoh: setelah import / edit usang)
 async function loadData() {
     try {
         daftarWarga = await QurbanStore.muatSemua();
-        if (daftarWarga.length === 0) {
-            await migrasiDataLokal();
-            if (daftarWarga.length === 0) daftarWarga = await QurbanStore.muatSemua();
-        }
     } catch (err) {
         daftarWarga = [];
         tampilkanGalatServer(err, 'Gagal memuat data dari Firestore.');
@@ -448,6 +445,31 @@ async function loadData() {
         renderTable();
         renderStats();
     }
+}
+
+// Langganan realtime: tabel & statistik ikut berubah otomatis
+// saat panitia lain (mis. halaman scan) menandai penukaran.
+let migrasiBerjalan = false;
+
+function mulaiSinkron() {
+    if (!QurbanStore.konfigurasiLengkap()) {
+        tampilkanGalatServer(new Error(QurbanStore.pesananKonfigurasi()), 'Konfigurasi Firebase belum siap.');
+        return;
+    }
+    QurbanStore.dengarkan(async (rows) => {
+        daftarWarga = rows;
+        if (rows.length === 0 && !migrasiBerjalan) {
+            migrasiBerjalan = true;
+            try {
+                await migrasiDataLokal();
+                daftarWarga = await QurbanStore.muatSemua();
+            } finally {
+                migrasiBerjalan = false;
+            }
+        }
+        renderTable();
+        renderStats();
+    }, (err) => tampilkanGalatServer(err, 'Koneksi realtime ke Firestore terputus.'));
 }
 
 // Kirim data lama localStorage ke Firestore saat pertama kali dipakai
@@ -1067,7 +1089,7 @@ async function applyImportedWarga(importedRows) {
 
 loadKuponLayout();
 bindKuponLayoutListeners();
-loadData();
+mulaiSinkron();
 </script>
 
 </body>

@@ -6,6 +6,7 @@ Aplikasi web untuk pengelolaan qurban Masjid Al-Hikmah — **frontend statis + b
 - **Data Warga & Kupon** — data penerima (tambah, edit, hapus, duplikat otomatis dilewati), statistik per RT, cetak kupon qurban, daftar hadir, serta import/export data.
 - **QR Code Kupon** — tiap kupon tercetak membawa QR code yang bisa dipindai untuk verifikasi penukaran daging (tandai sudah/belum tukar langsung dari kamera).
 - **Backend Firestore** — data tersimpan terpusat di Cloud Firestore sehingga konsisten antar perangkat (panitia yang beda ponsel melihat data yang sama). Tanpa server sendiri: halaman memanggil Firestore lewat Firebase SDK.
+- **Live Counter** — papan realtime (`live.html`) yang menampilkan jumlah warga yang sudah/belum tukar kupon, progres persen, statistik per RT, dan riwayat penukaran terbaru — cocok untuk layar/proyektor di lokasi. Tabel di halaman Data Warga juga ikut berubah otomatis saat panitia lain menandai penukaran.
 
 ## Cara Menjalankan Lokal
 
@@ -20,6 +21,7 @@ python3 -m http.server 8080 --directory public
 - `index.html` — Kalkulator Daging
 - `warga.html` — Data Warga & Kupon
 - `scanner.html` — Pemindai QR kupon (verifikasi penukaran)
+- `live.html` — Papan counter live masih/kelola tukar kupon (realtime)
 
 Preview penuh (hosting + Firestore lokal) juga bisa lewat emulator:
 
@@ -54,7 +56,8 @@ Aplikasi terbit di `https://<project-id>.web.app`.
 
 ## Sumber Data (Firestore)
 
-- Koleksi `warga`, satu dokumen per warga: `{ nama, rt, key, noKupon, sudahTukar }`.
+- Koleksi `warga`, satu dokumen per warga: `{ nama, rt, key, noKupon, sudahTukar, waktuTukar }`.
+- `waktuTukar` (timestamp ms) terisi otomatis saat panitia menandai penukaran, dan dihapus bila tandanya dibatalkan — dipakai papan Live untuk riwayat terbaru.
 - `key` = `nama||rt` (huruf kecil, spasi dirapikan) untuk mendeteksi duplikat.
 - Nomor kupon dialokasikan bertahap (`maks + 1`) dan tetap milik orangnya — aman untuk cetak ulang.
 - Halaman yang membuka data lama dari `localStorage` akan menawarkan migrasi sekali ke Firestore.
@@ -114,9 +117,10 @@ public/
 index.html                    Kalkulator daging qurban
 warga.html                    Data penerima, kupon, daftar hadir
 scanner.html                  Verifikasi tukar kupon lewat scan QR
+live.html                     Papan counter live realtime (layar/proyektor)
 assets/style.css              Style bersama antar halaman (header, panel, tombol, tabel, statistik)
 assets/firebase-config.js     Konfigurasi project Firebase (diisi pengguna)
-assets/store.js               Lapisan penyimpanan Firestore (CRUD, import, kupon)
+assets/store.js               Lapisan penyimpanan Firestore (CRUD, import, kupon, listener realtime)
 assets/xlsx.full.min.js       SheetJS 0.20.3 (CDN SheetJS, untuk import CSV/Excel)
 assets/qrcode.min.js          qrcode-generator 1.4.4 (pembuat QR pada kupon)
 assets/jsQR.min.js            jsQR 1.4.0 (decoder QR kamera di halaman scan)
