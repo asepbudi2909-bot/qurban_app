@@ -6,9 +6,9 @@
 <title>Live Counter Tukar Kupon Qurban AL-HIKMAH</title>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="assets/firebase-config.js?v=20261120"></script>
-<script src="assets/store.js?v=20261120"></script>
-<link rel="stylesheet" href="assets/style.css?v=20261120">
+<script src="assets/firebase-config.js?v=20261121"></script>
+<script src="assets/store.js?v=20261121"></script>
+<link rel="stylesheet" href="assets/style.css?v=20261121">
 <style>
 .container-live {
   display: grid;
@@ -292,8 +292,13 @@ function render(rows) {
         }).join('');
 
     const riwayat = rows
-        .filter(w => w.sudahTukar && Number.isFinite(w.waktuTukar))
-        .sort((a, b) => b.waktuTukar - a.waktuTukar)
+        .filter(w => w.sudahTukar)
+        .sort((a, b) => {
+            if (Number.isFinite(a.waktuTukar) && Number.isFinite(b.waktuTukar)) return b.waktuTukar - a.waktuTukar;
+            if (Number.isFinite(a.waktuTukar)) return -1;
+            if (Number.isFinite(b.waktuTukar)) return 1;
+            return String(a.nama).localeCompare(String(b.nama));
+        })
         .slice(0, 10);
     const listEl = document.getElementById('riwayatList');
     if (!riwayat.length) {
@@ -303,7 +308,7 @@ function render(rows) {
             <div class="riwayat-item">
                 <span class="nama">${esc(w.nama.toUpperCase())} — RT ${escAttr(w.rt)}</span>
                 <span class="kupon">${esc(formatKupon(w.noKupon))}</span>
-                <span class="jam">${esc(new Date(w.waktuTukar).toLocaleTimeString('id-ID'))}</span>
+                <span class="jam">${Number.isFinite(w.waktuTukar) ? esc(new Date(w.waktuTukar).toLocaleTimeString('id-ID')) : 'waktu tidak tercatat'}</span>
             </div>
         `).join('');
     }
