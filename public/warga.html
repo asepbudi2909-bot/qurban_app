@@ -45,6 +45,22 @@ td { padding: 0.625rem 0.75rem; text-align: left; font-size: 0.9em; }
   font-weight: bold;
 }
 
+/* Filter tabel */
+.filter-row { display: flex; gap: 6px; margin-top: 6px; width: 100%; align-items: center; }
+.filter-row select {
+  flex: 1;
+  width: auto;
+  min-width: 0;
+  padding: 0.5rem;
+  font-size: 0.8em;
+  background: rgba(255,255,255,0.1);
+  border-color: rgba(255,255,255,0.2);
+  color: #e0e0e0;
+}
+.filter-row select option { background: #0d2a20; color: #e0e0e0; }
+.filter-row .btn { flex: 0 0 auto; padding: 0.5rem 0.75rem; font-size: 0.8em; }
+.tampil-info { font-size: 0.7em; font-weight: 400; color: #8aa196; }
+
 /* Stats */
 .stats-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(6.25rem, 1fr)); gap: 0.625rem; margin-top: 0.9375rem; }
 .stat-card { padding: 0.625rem; }
@@ -290,10 +306,21 @@ td { padding: 0.625rem 0.75rem; text-align: left; font-size: 0.9em; }
     <div class="panel-header">
       <div style="display:flex; flex-direction:column; gap:5px; width:100%;">
         <div style="display:flex; justify-content:space-between; align-items:center;">
-          <h2>Daftar Penerima (<span id="totalWarga">0</span> Orang)</h2>
+          <h2>Daftar Penerima (<span id="totalWarga">0</span> Orang) <span class="tampil-info" id="tampilInfo"></span></h2>
           <button class="btn btn-danger" onclick="hapusSemua()" style="padding:5px 12px; font-size:0.75em;">Kosongkan Semua</button>
         </div>
         <input type="text" id="cariWarga" placeholder="🔍 Cari nama atau RT..." oninput="renderTable()" style="margin-top:10px; width:100%; background:rgba(255,255,255,0.1); border-color:rgba(255,255,255,0.2);">
+        <div class="filter-row">
+          <select id="filterRT" onchange="renderTable()" title="Saring berdasarkan RT">
+            <option value="">Semua RT</option>
+          </select>
+          <select id="filterTukar" onchange="renderTable()" title="Saring berdasarkan status tukar">
+            <option value="">Semua Status</option>
+            <option value="sudah">Sudah Tukar</option>
+            <option value="belum">Belum Tukar</option>
+          </select>
+          <button class="btn btn-outline" onclick="resetFilter()" title="Bersihkan pencarian & filter">↺ Reset</button>
+        </div>
       </div>
     </div>
     <div class="table-container">
@@ -630,17 +657,45 @@ async function hapusSemua() {
     renderStats();
 }
 
+function isiFilterRT() {
+    const select = document.getElementById('filterRT');
+    const pilihan = select.value;
+    const daftarRT = [...new Set(daftarWarga.map(w => w.rt))]
+        .sort((a, b) => String(a).localeCompare(String(b), undefined, { numeric: true }));
+    select.innerHTML = '<option value="">Semua RT</option>' +
+        daftarRT.map(rt => `<option value="${escAttr(rt)}">RT ${escAttr(rt)}</option>`).join('');
+    if (daftarRT.includes(pilihan)) select.value = pilihan;
+}
+
+function resetFilter() {
+    document.getElementById('cariWarga').value = '';
+    document.getElementById('filterRT').value = '';
+    document.getElementById('filterTukar').value = '';
+    renderTable();
+}
+
 function renderTable() {
     const tbody = document.querySelector('#tabelWarga tbody');
     const keyword = document.getElementById('cariWarga').value.toLowerCase();
+    const filterRT = document.getElementById('filterRT').value;
+    const filterTukar = document.getElementById('filterTukar').value;
     tbody.innerHTML = '';
-    
-    let filtered = daftarWarga.filter(w => 
-        w.nama.toLowerCase().includes(keyword) || 
-        w.rt.toLowerCase().includes(keyword)
-    );
+    isiFilterRT();
+
+    let filtered = daftarWarga.filter(w => {
+        const cocokKata = !keyword || w.nama.toLowerCase().includes(keyword) || w.rt.toLowerCase().includes(keyword);
+        const cocokRT = !filterRT || w.rt === filterRT;
+        const cocokTukar = !filterTukar
+            || (filterTukar === 'sudah' && w.sudahTukar)
+            || (filterTukar === 'belum' && !w.sudahTukar);
+        return cocokKata && cocokRT && cocokTukar;
+    });
 
     const sorted = sortWargaCopy(filtered);
+
+    const adaSaring = keyword || filterRT || filterTukar;
+    document.getElementById('tampilInfo').textContent =
+        adaSaring ? `(menampilkan ${sorted.length} dari ${daftarWarga.length})` : '';
 
     const rowsHtml = sorted.map((w, index) => `
         <tr style="${w.sudahTukar ? 'opacity:0.55;' : ''}">
