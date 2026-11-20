@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Data Penerima & Kupon Qurban AL-HIKMAH</title>
 <script src="assets/xlsx.full.min.js"></script>
+<script src="assets/qrcode.min.js"></script>
 <link rel="stylesheet" href="assets/style.css">
 <style>
 .container {
@@ -110,6 +111,8 @@ td { padding: 0.625rem 0.75rem; text-align: left; font-size: 0.9em; }
 .coupon-address { font-size: 9px; color: #555; }
 .coupon-footer { font-size: 7px; color: #888; border-top: 1px dotted #ccc; padding-top: 3px; margin-top: 5px; display: flex; justify-content: space-between; }
 .watermark { position: absolute; right: 5px; bottom: 15px; font-size: 25px; opacity: 0.08; transform: rotate(-20deg); font-weight: bold; pointer-events: none; }
+.coupon-qr { flex: 0 0 auto; }
+.coupon-qr svg { width: 100%; height: 100%; display: block; background: white; }
 
 /* Custom Alert */
 .custom-alert-overlay {
@@ -203,6 +206,7 @@ td { padding: 0.625rem 0.75rem; text-align: left; font-size: 0.9em; }
     <button class="btn btn-nav outline" onclick="exportExcel()" title="Export Daftar Warga ke Excel">📊 Excel</button>
     <button class="btn btn-nav outline" onclick="document.getElementById('importFile').click()" title="Import JSON / CSV / Excel">📥 Import</button>
     <button class="btn btn-nav outline" onclick="generateAttendanceList()">📋 Daftar Hadir</button>
+    <button class="btn btn-nav outline" onclick="location.href='scanner.html'" title="Scan QR kupon untuk verifikasi tukar">📷‍ Scan QR</button>
     <button class="btn btn-nav" onclick="generateCoupons()">🎟️ Cetak Kupon</button>
     <input type="file" id="importFile" style="display:none" accept=".json,.csv,.xls,.xlsx" onchange="importData(this)">
   </div>
@@ -254,6 +258,17 @@ td { padding: 0.625rem 0.75rem; text-align: left; font-size: 0.9em; }
       <div class="form-group">
         <label>Ukuran Teks (%)</label>
         <input type="number" id="kuponFontSize" value="100" min="50" max="200">
+      </div>
+      <div class="form-group">
+        <label>QR Code</label>
+        <select id="kuponQR">
+          <option value="1">Aktif</option>
+          <option value="0">Nonaktif</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Ukuran QR (mm)</label>
+        <input type="number" id="kuponQRSize" value="12" min="6" max="25">
       </div>
     </div>
 
@@ -362,7 +377,7 @@ document.addEventListener('keydown', function(event) {
 
 
 const KUPON_LAYOUT_KEY = 'qurbanKuponLayout';
-const kuponLayoutFields = ['kuponKolom', 'kuponBaris', 'kuponMargin', 'kuponGap', 'tahunHijriah', 'kuponFontSize'];
+const kuponLayoutFields = ['kuponKolom', 'kuponBaris', 'kuponMargin', 'kuponGap', 'tahunHijriah', 'kuponFontSize', 'kuponQR', 'kuponQRSize'];
 
 function loadKuponLayout() {
     const saved = localStorage.getItem(KUPON_LAYOUT_KEY);
@@ -679,6 +694,21 @@ function renderStats() {
     });
 }
 
+function buildKuponQrPayload(warga) {
+    return `QURBAN|${warga.noKupon}|${warga.id}`;
+}
+
+function buildKuponQrSvg(warga) {
+    try {
+        const qr = qrcode(0, 'M');
+        qr.addData(buildKuponQrPayload(warga));
+        qr.make();
+        return qr.createSvgTag({ cellSize: 2, margin: 0, scalable: true });
+    } catch (err) {
+        return '';
+    }
+}
+
 function generateCoupons() {
     if (daftarWarga.length === 0) {
         showAlert('Belum ada data warga.', 'Data Kosong');
@@ -691,6 +721,8 @@ function generateCoupons() {
     const margin = parseInt(document.getElementById('kuponMargin').value) || 10;
     const gap = parseInt(document.getElementById('kuponGap').value) || 2;
     const fontScale = (parseInt(document.getElementById('kuponFontSize').value) || 100) / 100;
+    const qrAktif = (document.getElementById('kuponQR').value || '1') === '1';
+    const qrSize = Math.min(25, Math.max(6, parseInt(document.getElementById('kuponQRSize').value) || 12));
     
     const sorted = sortWargaCopy();
 
@@ -719,9 +751,12 @@ function generateCoupons() {
                         <div class="coupon-title" style="font-size:${8 * fontScale}px;">KUPON QURBAN</div>
                         <div class="coupon-no" style="font-size:${10 * fontScale}px;">${esc(formatKupon(w.noKupon))}</div>
                     </div>
-                    <div class="coupon-body" style="text-align:center;">
-                        <div class="coupon-name" style="font-size:${11 * fontScale}px;">${esc(w.nama.toUpperCase())}</div>
-                        <div class="coupon-address" style="font-size:${8 * fontScale}px;">RT ${esc(w.rt)}</div>
+                    <div class="coupon-body" style="text-align:center;${qrAktif ? ' display:flex; align-items:center; gap:4px;' : ''}">
+                        <div style="${qrAktif ? 'flex:1;' : ''}">
+                            <div class="coupon-name" style="font-size:${11 * fontScale}px;">${esc(w.nama.toUpperCase())}</div>
+                            <div class="coupon-address" style="font-size:${8 * fontScale}px;">RT ${esc(w.rt)}</div>
+                        </div>
+                        ${qrAktif ? `<div class="coupon-qr" style="width:${qrSize}mm; height:${qrSize}mm;">${buildKuponQrSvg(w)}</div>` : ''}
                     </div>
                     <div class="coupon-footer" style="font-size:${7 * fontScale}px;">
                         <div>AL-HIKMAH - ${thnH} H</div>

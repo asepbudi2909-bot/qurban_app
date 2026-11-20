@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Scan QR Kupon Qurban AL-HIKMAH</title>
+<script src="assets/jsQR.min.js"></script>
+<link rel="stylesheet" href="assets/style.css">
+<style>
+.container-scan {
+  display: grid;
+  grid-template-columns: minmax(240px, 420px) 1fr;
+  gap: 0.9375rem;
+  flex: 1;
+}
+
+@media (max-width: 720px) {
+  .container-scan { grid-template-columns: 1fr; }
+}
+
+.camera-panel { display: flex; flex-direction: column; }
+
+.camera-frame {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  background: #05130d;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,0.12);
+}
+
+.camera-frame video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.camera-frame canvas { display: none; }
+
+.scan-line {
+  position: absolute;
+  left: 10%;
+  right: 10%;
+  height: 2px;
+  top: 20%;
+  background: rgba(52, 211, 153, 0.55);
+  box-shadow: 0 0 8px rgba(52, 211, 153, 0.6);
+  pointer-events: none;
+}
+
+.camera-idle {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  color: #6b7f74;
+  font-size: 0.85em;
+  padding: 12px;
+}
+
+.camera-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+  flex-wrap: wrap;
+}
+
+.scan-status {
+  margin-top: 8px;
+  font-size: 0.8em;
+  color: #6b7f74;
+  min-height: 1.2em;
+}
+
+.scan-status.err { color: #f87171; }
+.scan-status.ok { color: #34d399; }
+
+.result-panel { display: flex; flex-direction: column; }
+
+.result-card {
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 12px;
+  padding: 16px;
+  background: linear-gradient(160deg, rgba(9, 35, 27, 0.96), rgba(13, 42, 32, 0.96));
+}
+
+.result-empty {
+  color: #6b7f74;
+  font-size: 0.9em;
+  text-align: center;
+  padding: 28px 8px;
+}
+
+.result-card .rk-name {
+  font-size: 1.25em;
+  font-weight: 700;
+  color: #e5e7eb;
+  word-break: break-word;
+}
+
+.result-card .rk-meta {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+  align-items: center;
+  font-size: 0.85em;
+  color: #9ca3af;
+}
+
+.result-card .rk-kupon {
+  font-weight: 900;
+  color: #e7c66b;
+  background: rgba(231, 198, 107, 0.12);
+  padding: 2px 10px;
+  border-radius: 6px;
+}
+
+.rk-status { font-weight: 700; }
+.rk-status.sudah { color: #34d399; }
+.rk-status.belum { color: #fbbf24; }
+
+.result-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 14px;
+  flex-wrap: wrap;
+}
+
+.manual-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.manual-row input {
+  flex: 1;
+  padding: 0.625rem;
+  font-size: 0.9em;
+}
+
+.scan-log {
+  margin-top: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.scan-log-item {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 0.82em;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: rgba(255,255,255,0.05);
+  color: #d1d5db;
+}
+
+.scan-log-item .lk-kupon { color: #e7c66b; font-weight: 700; }
+.scan-log-item .lk-waktu { color: #6b7f74; white-space: nowrap; }
+
+.scan-log-item.sudah { border-left: 3px solid #34d399; }
+.scan-log-item.belum { border-left: 3px solid #fbbf24; }
+.scan-log-item.tak-dikenal { border-left: 3px solid #f87171; color: #fca5a5; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>📷‍ Scan QR Kupon</h1>
+  <div class="nav-group">
+    <button class="btn btn-nav outline" onclick="location.href='index.html'">📊 Kalkulator Daging</button>
+    <button class="btn btn-nav outline" onclick="location.href='warga.html'">👥 Data Warga & Kupon</button>
+    <div class="nav-divider"></div>
+    <button class="btn btn-nav active" onclick="location.href='scanner.html'">📷‍ Scan QR</button>
+  </div>
+</header>
+
+<div class="container-scan">
+  <!-- Kiri: Kamera -->
+  <div class="panel camera-panel">
+    <div class="panel-header">
+      <h2>Pemindai QR</h2>
+    </div>
+    <div class="camera-frame" id="cameraFrame">
+      <video id="video" playsinline muted></video>
+      <canvas id="canvas"></canvas>
+      <div class="scan-line" id="scanLine" style="display:none;"></div>
+      <div class="camera-idle" id="cameraIdle">
+        Kamera belum aktif.<br>Tekan tombol “Mulai Kamera”.<br><br>
+        Izin kamera butuh halaman dibuka
+        lewat <b>https://</b> atau <b>localhost</b> (bukan file://).
+      </div>
+    </div>
+    <div class="camera-actions">
+      <button class="btn" id="btnStart" onclick="mulaiKamera()">▶ Mulai Kamera</button>
+      <button class="btn btn-outline" id="btnStop" onclick="hentikanKamera()" style="display:none;">⏹ Hentikan</button>
+      <button class="btn btn-outline" id="btnSwitch" onclick="gantiKamera()" style="display:none;">🔄 Kamera Lain</button>
+    </div>
+    <div class="scan-status" id="scanStatus"></div>
+  </div>
+
+  <!-- Kanan: Hasil & Log -->
+  <div class="panel result-panel">
+    <div class="panel-header">
+      <h2>Hasil Pindai</h2>
+    </div>
+    <div class="result-card" id="resultCard">
+      <div class="result-empty">Arahkan kamera ke QR code pada kupon.</div>
+    </div>
+
+    <div class="manual-row">
+      <input type="text" id="manualInput" placeholder="Kamera bermasalah? Ketik no kupon (contoh: 12 atau #012)..." autocomplete="off" onkeydown="if(event.key==='Enter'){cariManual();}">
+      <button class="btn btn-outline" onclick="cariManual()">Cari</button>
+    </div>
+
+    <div class="panel-header" style="margin-top:20px;">
+      <h2>Riwayat Pindai</h2>
+    </div>
+    <div class="scan-log" id="scanLog">
+      <div class="result-empty" style="padding:10px;">Belum ada pindaian.</div>
+    </div>
+  </div>
+</div>
+
+<script>
+const WARGA_KEY = 'qurbanWarga';
+const QR_PREFIX = 'QURBAN|';
+const GANTI_TUKAR_KEY = 'qurbanScanRequest';
+const COOLDOWN_MS = 2500;
+
+let videoStream = null;
+let scanning = false;
+let lastDetections = new Map();
+let videoFacingMode = 'environment';
+
+function esc(value) {
+    const div = document.createElement('div');
+    div.textContent = String(value ?? '');
+    return div.innerHTML;
+}
+
+function escAttr(value) {
+    return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+}
+
+function formatKupon(num) {
+    return '#' + String(num || 0).padStart(3, '0');
+}
+
+function bacaWarga() {
+    try {
+        const parsed = JSON.parse(localStorage.getItem(WARGA_KEY) || '[]');
+        return Array.isArray(parsed) ? parsed : [];
+    } catch (err) {
+        return [];
+    }
+}
+
+function simpanWarga(daftar) {
+    localStorage.setItem(WARGA_KEY, JSON.stringify(daftar));
+    localStorage.setItem(GANTI_TUKAR_KEY, String(Date.now()));
+}
+
+function setStatus(message, jenis = '') {
+    const el = document.getElementById('scanStatus');
+    el.className = 'scan-status' + (jenis ? ' ' + jenis : '');
+    el.textContent = message;
+}
+
+function beep() {
+    try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.type = 'sine';
+        osc.frequency.value = 880;
+        gain.gain.setValueAtTime(0.15, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.25);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.25);
+        osc.onended = () => ctx.close();
+    } catch (err) { /* audio opsional */ }
+    if (navigator.vibrate) navigator.vibrate(80);
+}
+
+function parseQrPayload(text) {
+    const value = String(text || '').trim();
+    if (!value.toUpperCase().startsWith(QR_PREFIX)) return null;
+    const parts = value.split('|');
+    if (parts.length < 3) return null;
+    const noKupon = parseInt(parts[1], 10);
+    const id = parts.slice(2).join('|');
+    if (!Number.isInteger(noKupon) && !id) return null;
+    return { noKupon: Number.isInteger(noKupon) ? noKupon : null, id };
+}
+
+function cariWargaDariPayload(payload) {
+    const daftar = bacaWarga();
+    return daftar.find(w => payload.id && w.id === payload.id)
+        || daftar.find(w => payload.noKupon !== null && w.noKupon === payload.noKupon)
+        || null;
+}
+
+function renderHasil(warga) {
+    const card = document.getElementById('resultCard');
+    if (!warga) {
+        card.innerHTML = `<div class="result-empty">QR tidak dikenali.<br>Pastikan kupon berasal dari aplikasi ini.</div>`;
+        return;
+    }
+    card.innerHTML = `
+        <div class="rk-name">${esc(warga.nama.toUpperCase())}</div>
+        <div class="rk-meta">
+            <span class="rk-kupon">${esc(formatKupon(warga.noKupon))}</span>
+            <span class="badge-rt">RT ${esc(warga.rt)}</span>
+            <span class="rk-status ${warga.sudahTukar ? 'sudah' : 'belum'}">${warga.sudahTukar ? '✓ Sudah tukar' : 'Belum tukar'}</span>
+        </div>
+        <div class="result-actions">
+            <button class="btn btn-lg" data-tandai-id="${escAttr(warga.id)}" onclick="tandaiTukar('${escAttr(warga.id)}', ${!warga.sudahTukar})">${warga.sudahTukar ? '↩ Batalkan Tanda' : '✓ Tandai Sudah Tukar'}</button>
+        </div>
+    `;
+}
+
+function tandaiTukar(id, nilaiTukar) {
+    const daftar = bacaWarga();
+    const warga = daftar.find(w => w.id === id);
+    if (!warga) {
+        setStatus('Data warga tidak ditemukan (data mungkin berubah).', 'err');
+        return;
+    }
+    warga.sudahTukar = nilaiTukar;
+    simpanWarga(daftar);
+    renderHasil(warga);
+    tambahLog(warga, nilaiTukar, (
+        (nilaiTukar ? 'Ditandai tukar' : 'Dibatalkan')
+    ));
+    setStatus(`${formatKupon(warga.noKupon)} — ${nilaiTukar ? 'ditandai sudah tukar' : 'tanda dibatalkan'}.`, 'ok');
+}
+
+function tambahLog(warga, sudahTukar, keterangan) {
+    const logEl = document.getElementById('scanLog');
+    const kosong = logEl.querySelector('.result-empty');
+    if (kosong) kosong.remove();
+
+    const waktu = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    const kelas = sudahTukar ? 'sudah' : 'belum';
+    const item = document.createElement('div');
+    item.className = `scan-log-item ${kelas}`;
+    item.innerHTML = `
+        <span><span class="lk-kupon">${esc(formatKupon(warga.noKupon))}</span> ${esc(warga.nama.toUpperCase())} — RT ${esc(warga.rt)} ${sudahTukar ? '✓' : '↩'}</span>
+        <span class="lk-waktu">${esc(waktu)}${keterangan ? ' · ' + esc(keterangan) : ''}</span>
+    `;
+    logEl.prepend(item);
+    while (logEl.children.length > 15) logEl.lastChild.remove();
+}
+
+function tambahLogTidakDikenal(payloadText) {
+    const logEl = document.getElementById('scanLog');
+    const kosong = logEl.querySelector('.result-empty');
+    if (kosong) kosong.remove();
+
+    const waktu = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    const item = document.createElement('div');
+    item.className = 'scan-log-item tak-dikenal';
+    item.innerHTML = `
+        <span>QR tidak dikenali: ${esc(payloadText)}</span>
+        <span class="lk-waktu">${esc(waktu)}</span>
+    `;
+    logEl.prepend(item);
+    while (logEl.children.length > 15) logEl.lastChild.remove();
+}
+
+function prosesKode(text) {
+    const now = Date.now();
+    const terakhir = lastDetections.get(text) || 0;
+    if (now - terakhir < COOLDOWN_MS) return;
+    lastDetections.set(text, now);
+
+    const payload = parseQrPayload(text);
+    if (!payload) {
+        setStatus('QR terbaca tapi bukan kupon qurban.', 'err');
+        tambahLogTidakDikenal(text);
+        return;
+    }
+
+    const warga = cariWargaDariPayload(payload);
+    if (!warga) {
+        setStatus(`Kupon ${payload.noKupon !== null ? formatKupon(payload.noKupon) : ''} tidak ada dalam data.`, 'err');
+        tambahLogTidakDikenal(text);
+        return;
+    }
+
+    beep();
+    renderHasil(warga);
+    tambahLog(warga, warga.sudahTukar, 'Terbaca');
+    setStatus(
+        warga.sudahTukar
+            ? `${formatKupon(warga.noKupon)} sudah pernah tukar.`
+            : `${formatKupon(warga.noKupon)} — ${esc(warga.nama.toUpperCase())} (RT ${warga.rt}), belum tukar.`,
+        warga.sudahTukar ? 'err' : 'ok'
+    );
+}
+
+function scanFrame() {
+    if (!scanning) return;
+    const video = document.getElementById('video');
+    const canvas = document.getElementById('canvas');
+    if (video.readyState === video.HAVE_ENOUGH_DATA) {
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: 'dontInvert' });
+        if (code && code.data) {
+            const garis = code.location;
+            const line = document.getElementById('scanLine');
+            line.style.top = `${Math.min(90, Math.max(10, ((garis.topLeftCorner.y + garis.bottomRightCorner.y) / 2) / imageData.height * 100))}%`;
+            prosesKode(code.data);
+        }
+    }
+    requestAnimationFrame(scanFrame);
+}
+
+function mulaiKamera() {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        setStatus('Browser tidak mendukung akses kamera. Gunakan input manual di kanan.', 'err');
+        return;
+    }
+    hentikanKamera(true);
+    navigator.mediaDevices.getUserMedia({
+        video: { facingMode: videoFacingMode, width: { ideal: 1280 } },
+        audio: false
+    }).then(function(stream) {
+        videoStream = stream;
+        const video = document.getElementById('video');
+        video.srcObject = stream;
+        video.setAttribute('playsinline', 'true');
+        video.play();
+        document.getElementById('cameraIdle').style.display = 'none';
+        document.getElementById('scanLine').style.display = 'block';
+        document.getElementById('btnStart').style.display = 'none';
+        document.getElementById('btnStop').style.display = '';
+        document.getElementById('btnSwitch').style.display = '';
+        scanning = true;
+        requestAnimationFrame(scanFrame);
+        setStatus('Kamera aktif. Arahkan ke QR kupon.');
+        cekDataKosong();
+    }).catch(function(err) {
+        setStatus('Tidak bisa membuka kamera: ' + err.message + '. Gunakan input manual di kanan.', 'err');
+    });
+}
+
+function hentikanKamera(diam) {
+    scanning = false;
+    lastDetections.clear();
+    if (videoStream) {
+        videoStream.getTracks().forEach(t => t.stop());
+        videoStream = null;
+    }
+    const video = document.getElementById('video');
+    video.srcObject = null;
+    if (!diam) {
+        document.getElementById('cameraIdle').style.display = 'flex';
+        document.getElementById('scanLine').style.display = 'none';
+        document.getElementById('btnStart').style.display = '';
+        document.getElementById('btnStop').style.display = 'none';
+        document.getElementById('btnSwitch').style.display = 'none';
+        setStatus('Kamera dihentikan.');
+    }
+}
+
+function gantiKamera() {
+    videoFacingMode = videoFacingMode === 'environment' ? 'user' : 'environment';
+    mulaiKamera();
+}
+
+function cariManual() {
+    const input = document.getElementById('manualInput');
+    const nilai = input.value.trim().replace(/#/, '');
+    if (!nilai) return;
+    const noKupon = parseInt(nilai, 10);
+    const daftar = bacaWarga();
+    const warga = daftar.find(w => w.noKupon === noKupon)
+        || daftar.find(w => w.nama.toLowerCase().includes(nilai.toLowerCase()));
+    input.value = '';
+    if (!warga) {
+        setStatus(`Tidak ada warga dengan kupon "${nilai}".`, 'err');
+        return;
+    }
+    renderHasil(warga);
+    itemLogManual(warga);
+    setStatus(`${formatKupon(warga.noKupon)} — ${warga.sudahTukar ? 'sudah tukar' : 'belum tukar'}.`, warga.sudahTukar ? 'err' : 'ok');
+}
+
+function itemLogManual(warga) {
+    const logEl = document.getElementById('scanLog');
+    const kosong = logEl.querySelector('.result-empty');
+    if (kosong) kosong.remove();
+    const waktu = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    const item = document.createElement('div');
+    item.className = `scan-log-item ${warga.sudahTukar ? 'sudah' : 'belum'}`;
+    item.innerHTML = `
+        <span><span class="lk-kupon">${esc(formatKupon(warga.noKupon))}</span> ${esc(warga.nama.toUpperCase())} — RT ${esc(warga.rt)} (manual)</span>
+        <span class="lk-waktu">${esc(waktu)}</span>
+    `;
+    logEl.prepend(item);
+    while (logEl.children.length > 15) logEl.lastChild.remove();
+}
+
+function cekDataKosong() {
+    if (!bacaWarga().length) {
+        setStatus('Data warga masih kosong. Tambah/import data di halaman Data Warga kiri.', 'err');
+    }
+}
+
+window.addEventListener('storage', function(event) {
+    if (event.key === GANTI_TUKAR_KEY) {
+        const card = document.getElementById('resultCard');
+        const btn = card.querySelector('button[data-tandai-id]');
+        if (!btn) return;
+        const warga = bacaWarga().find(w => w.id === btn.dataset.tandaiId);
+        if (warga) renderHasil(warga);
+    }
+});
+
+document.addEventListener('keydown', function(event) {
+    if (event.key === 'Escape') hentikanKamera();
+});
+
+window.addEventListener('beforeunload', function() {
+    if (videoStream) videoStream.getTracks().forEach(t => t.stop());
+});
+
+cekDataKosong();
+</script>
+
+</body>
+</html>
