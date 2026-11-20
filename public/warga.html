@@ -4,6 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Data Penerima & Kupon Qurban AL-HIKMAH</title>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="assets/firebase-config.js"></script>
+<script src="assets/store.js"></script>
 <script src="assets/xlsx.full.min.js"></script>
 <script src="assets/qrcode.min.js"></script>
 <link rel="stylesheet" href="assets/style.css">
@@ -333,7 +337,6 @@ td { padding: 0.625rem 0.75rem; text-align: left; font-size: 0.9em; }
 
 <script>
 let daftarWarga = [];
-let idCounter = 0;
 let editingId = null;
 
 function esc(value) {
@@ -349,11 +352,6 @@ function escAttr(value) {
         .replace(/'/g, '&#39;')
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;');
-}
-
-function generateUniqueId() {
-    idCounter += 1;
-    return `${Date.now()}-${idCounter}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
 function showAlert(message, title = 'Informasi') {
@@ -415,12 +413,6 @@ function bindKuponLayoutListeners() {
     });
 }
 
-function buildWargaKey(nama, rt) {
-    const namaNorm = String(nama || '').trim().toLowerCase().replace(/\s+/g, ' ');
-    const rtNorm = String(rt || '').trim().toLowerCase();
-    return `${namaNorm}||${rtNorm}`;
-}
-
 function formatKupon(num) {
     return '#' + String(num || 0).padStart(3, '0');
 }
@@ -432,86 +424,73 @@ function sortWargaCopy(list) {
     });
 }
 
-function ensureKuponNumbers() {
-    const needs = daftarWarga.filter(w => !Number.isInteger(w.noKupon) || w.noKupon < 1);
-    if (!needs.length) return false;
-    const used = daftarWarga.filter(w => Number.isInteger(w.noKupon) && w.noKupon >= 1).map(w => w.noKupon);
-    let next = Math.max(0, ...used) + 1;
-    sortWargaCopy(needs).forEach(w => { w.noKupon = next++; });
-    return true;
+function tampilkanGalatServer(err, konteks) {
+    const detail = String(err?.message || err || 'Tidak diketahui');
+    showAlert(
+        `${konteks}\nDetail: ${detail}` +
+        (QurbanStore.konfigurasiLengkap() ? '' : `\n\n${QurbanStore.pesananKonfigurasi()}`),
+        'Koneksi Gagal'
+    );
 }
 
-function nomorKuponBerikutnya() {
-    const used = daftarWarga.filter(w => Number.isInteger(w.noKupon) && w.noKupon >= 1).map(w => w.noKupon);
-    return Math.max(0, ...used) + 1;
-}
-
-function dedupeWargaList(rows) {
-    const seen = new Set();
-    const uniqueRows = [];
-    let duplicateCount = 0;
-    const duplicateItems = [];
-
-    rows.forEach(row => {
-        const key = buildWargaKey(row.nama, row.rt);
-        if (seen.has(key)) {
-            duplicateCount++;
-            duplicateItems.push({ nama: row.nama, rt: row.rt });
-            return;
-        }
-        seen.add(key);
-        uniqueRows.push(row);
-    });
-
-    return { uniqueRows, duplicateCount, duplicateItems };
-}
-
-// Load data dari localStorage
-function loadData() {
-    const saved = localStorage.getItem('qurbanWarga');
-    if (!saved) {
-        renderTable();
-        renderStats();
-        return;
-    }
-
+// Muat data dari Firestore (dengan migrasi otomatis dari localStorage lama)
+async function loadData() {
     try {
-        const parsed = JSON.parse(saved);
-        if (!Array.isArray(parsed)) throw new Error('Format data bukan array');
-
-        const normalized = parsed
-            .map(item => normalizeWargaRow(item))
-            .filter(Boolean);
-
-        daftarWarga = dedupeWargaList(normalized).uniqueRows;
-        if (perbaikiNomorKuponDuplikat()) {
-            localStorage.setItem('qurbanWarga', JSON.stringify(daftarWarga));
+        daftarWarga = await QurbanStore.muatSemua();
+        if (daftarWarga.length === 0) {
+            await migrasiDataLokal();
+            if (daftarWarga.length === 0) daftarWarga = await QurbanStore.muatSemua();
         }
     } catch (err) {
         daftarWarga = [];
-        showAlert(
-            'Data lokal terdeteksi rusak/tidak valid, data di-reset ke kosong.\n' +
-            `Detail: ${err.message}`,
-            'Pemulihan Data'
-        );
+        tampilkanGalatServer(err, 'Gagal memuat data dari Firestore.');
     } finally {
         renderTable();
         renderStats();
     }
 }
 
-// Simpan data ke localStorage (tanpa render ulang tabel, untuk toggle checkbox)
-function persistData() {
-    localStorage.setItem('qurbanWarga', JSON.stringify(daftarWarga));
-    renderStats();
-}
+// Kirim data lama localStorage ke Firestore saat pertama kali dipakai
+async function migrasiDataLokal() {
+    if (localStorage.getItem('qurbanMigrasiServer') === '1') return;
+    const saved = localStorage.getItem('qurbanWarga');
+    if (!saved) return;
 
-// Simpan data ke localStorage
-function saveData() {
-    ensureKuponNumbers();
-    localStorage.setItem('qurbanWarga', JSON.stringify(daftarWarga));
-    renderTable();
-    renderStats();
+    let parsed;
+    try {
+        parsed = JSON.parse(saved);
+    } catch (err) {
+        return;
+    }
+    if (!Array.isArray(parsed) || !parsed.length) return;
+
+    const rows = parsed
+        .map(w => ({
+            nama: String(w.nama || '').trim(),
+            rt: String(w.rt || '').trim(),
+            noKupon: w.noKupon,
+            sudahTukar: w.sudahTukar === true
+        }))
+        .filter(w => w.nama && w.rt);
+    if (!rows.length) return;
+
+    const kirim = confirm(
+        `Terdeteksi ${rows.length} data warga di perangkat ini (localStorage).\n` +
+        'Kirim ke Firestore agar terintegrasi antar perangkat?\n' +
+        '(Data lokal tetap dipertahankan sebagai backup.)'
+    );
+    if (!kirim) {
+        localStorage.setItem('qurbanMigrasiServer', '1');
+        return;
+    }
+
+    try {
+        await QurbanStore.importWarga(rows, 'timpa');
+        localStorage.setItem('qurbanMigrasiServer', '1');
+        showAlert('Data lama dari perangkat ini berhasil dikirim ke Firestore.', 'Migrasi Data');
+    } catch (err) {
+        tampilkanGalatServer(err, 'Gagal mengirim data lokal ke Firestore.');
+    }
 }
 
 function cariWargaById(id) {
@@ -544,7 +523,7 @@ function batalEdit() {
     document.getElementById('nama').focus();
 }
 
-function tambahWarga() {
+async function tambahWarga() {
     const namaInput = document.getElementById('nama');
     const rtInput = document.getElementById('rt');
     const nama = namaInput.value.trim();
@@ -555,66 +534,78 @@ function tambahWarga() {
         return;
     }
 
-    const newKey = buildWargaKey(nama, rt);
-    const exists = daftarWarga.some(w => w.id !== editingId && buildWargaKey(w.nama, w.rt) === newKey);
-    if (exists) {
-        showAlert('Data duplikat: nama dan RT ini sudah ada.', 'Duplikat Terdeteksi');
-        return;
-    }
-
-    if (editingId !== null) {
-        const warga = cariWargaById(editingId);
-        editingId = null;
-        setFormEditMode(false);
-        namaInput.value = '';
-        rtInput.value = '';
-        namaInput.focus();
-        if (!warga) {
-            showAlert('Data yang diedit tidak ditemukan lagi (kemungkinan berubah saat import/hapus).', 'Edit Dibatalkan');
-            saveData();
-            return;
-        }
-        warga.nama = nama;
-        warga.rt = rt;
-        saveData();
-        showAlert('Perubahan data warga telah disimpan.', 'Edit Berhasil');
-        return;
-    }
-
-    daftarWarga.push({
-        id: generateUniqueId(),
-        nama,
-        rt,
-        noKupon: nomorKuponBerikutnya(),
-        sudahTukar: false
-    });
-
-    namaInput.value = '';
-    namaInput.focus();
-
-    saveData();
-}
-
-function hapusWarga(id) {
-    if(confirm('Hapus data warga ini?')) {
-        daftarWarga = daftarWarga.filter(w => w.id !== id);
-        if (editingId === id) {
+    const submitBtn = document.querySelector('#wargaForm button[type="submit"]');
+    submitBtn.disabled = true;
+    try {
+        if (editingId !== null) {
+            const id = editingId;
+            const warga = cariWargaById(id);
             editingId = null;
             setFormEditMode(false);
-            document.getElementById('nama').value = '';
-            document.getElementById('rt').value = '';
+            namaInput.value = '';
+            rtInput.value = '';
+            namaInput.focus();
+            if (!warga) {
+                showAlert('Data yang diedit tidak ditemukan lagi.', 'Edit Dibatalkan');
+                loadData();
+                return;
+            }
+            const diperbarui = await QurbanStore.ubah(id, { nama, rt });
+            Object.assign(warga, diperbarui);
+            renderTable();
+            renderStats();
+            showAlert('Perubahan data warga telah disimpan.', 'Edit Berhasil');
+            return;
         }
-        saveData();
+
+        const baru = await QurbanStore.tambah(nama, rt);
+        daftarWarga.push(baru);
+        namaInput.value = '';
+        namaInput.focus();
+        renderTable();
+        renderStats();
+    } catch (err) {
+        const pesan = String(err?.message || err);
+        if (pesan.includes('duplikat')) showAlert(pesan, 'Duplikat Terdeteksi');
+        else tampilkanGalatServer(err, 'Gagal menyimpan data ke Firestore.');
+    } finally {
+        submitBtn.disabled = false;
     }
 }
 
-function hapusSemua() {
-    if(confirm('PERHATIAN: Hapus semua data warga?')) {
-        daftarWarga = [];
+async function hapusWarga(id) {
+    if (!confirm('Hapus data warga ini?')) return;
+    try {
+        await QurbanStore.hapus(id);
+    } catch (err) {
+        tampilkanGalatServer(err, 'Gagal menghapus data di Firestore.');
+        return;
+    }
+    daftarWarga = daftarWarga.filter(w => w.id !== id);
+    if (editingId === id) {
         editingId = null;
         setFormEditMode(false);
-        saveData();
+        document.getElementById('nama').value = '';
+        document.getElementById('rt').value = '';
     }
+    renderTable();
+    renderStats();
+}
+
+async function hapusSemua() {
+    if (!confirm('PERHATIAN: Hapus semua data warga?')) return;
+    if (!confirm('Data di Firestore akan dikosongkan dan tidak bisa dikembalikan. Lanjutkan?')) return;
+    try {
+        await QurbanStore.hapusSemua();
+    } catch (err) {
+        tampilkanGalatServer(err, 'Gagal mengosongkan data di Firestore.');
+        return;
+    }
+    daftarWarga = [];
+    editingId = null;
+    setFormEditMode(false);
+    renderTable();
+    renderStats();
 }
 
 function renderTable() {
@@ -657,13 +648,22 @@ document.querySelector('#tabelWarga tbody').addEventListener('click', function(e
     if (btn) hapusWarga(btn.dataset.id);
 });
 
-document.querySelector('#tabelWarga tbody').addEventListener('change', function(event) {
+document.querySelector('#tabelWarga tbody').addEventListener('change', async function(event) {
     const cb = event.target.closest('input[data-tukar-id]');
     if (!cb) return;
     const warga = cariWargaById(cb.dataset.tukarId);
     if (!warga) return;
-    warga.sudahTukar = cb.checked;
-    persistData();
+    const nilaiBaru = cb.checked;
+    warga.sudahTukar = nilaiBaru;
+    renderStats();
+    try {
+        await QurbanStore.setTukar(warga.id, nilaiBaru);
+    } catch (err) {
+        warga.sudahTukar = !nilaiBaru;
+        cb.checked = warga.sudahTukar;
+        renderStats();
+        tampilkanGalatServer(err, 'Gagal menyimpan status tukar ke Firestore.');
+    }
 });
 
 function renderStats() {
@@ -1001,28 +1001,11 @@ function normalizeWargaRow(row) {
     if (!nama || !rt) return null;
 
     return {
-        id: row.id ? String(row.id) : generateUniqueId(),
         nama,
         rt,
         noKupon: (Number.isInteger(row.noKupon) && row.noKupon >= 1) ? row.noKupon : undefined,
         sudahTukar: row.sudahTukar === true
     };
-}
-
-function perbaikiNomorKuponDuplikat() {
-    const seen = new Set();
-    let adaYangDibersihkan = false;
-    sortWargaCopy().forEach(w => {
-        if (Number.isInteger(w.noKupon) && w.noKupon >= 1) {
-            if (seen.has(w.noKupon)) {
-                w.noKupon = undefined;
-                adaYangDibersihkan = true;
-                return;
-            }
-            seen.add(w.noKupon);
-        }
-    });
-    return adaYangDibersihkan || ensureKuponNumbers();
 }
 
 function findKey(keys, candidates) {
@@ -1041,72 +1024,45 @@ function normalizeKey(value) {
         .replace(/[^a-z0-9]/g, '');
 }
 
-function applyImportedWarga(importedRows) {
+async function applyImportedWarga(importedRows) {
     const mode = prompt(
         `Ditemukan ${importedRows.length} data valid.\nKetik 1 untuk TIMPA data lama.\nKetik 2 untuk GABUNG ke data lama.`,
         '2'
     );
 
     if (mode === null) return;
-
-    const beforeCount = daftarWarga.length;
-    let processed = [];
-    let duplicateCount = 0;
-    let duplicateItems = [];
-
-    if (mode === '1') {
-        const result = dedupeWargaList(importedRows);
-        processed = result.uniqueRows;
-        duplicateCount = result.duplicateCount;
-        duplicateItems = result.duplicateItems;
-        daftarWarga = processed;
-    } else if (mode === '2') {
-        const existingKeys = new Set(daftarWarga.map(w => buildWargaKey(w.nama, w.rt)));
-        const importOnly = dedupeWargaList(importedRows);
-        const acceptedRows = [];
-        const crossDuplicates = [];
-
-        importOnly.uniqueRows.forEach(row => {
-            const key = buildWargaKey(row.nama, row.rt);
-            if (existingKeys.has(key)) {
-                crossDuplicates.push({ nama: row.nama, rt: row.rt });
-                return;
-            }
-            existingKeys.add(key);
-            acceptedRows.push(row);
-        });
-
-        processed = [...daftarWarga, ...acceptedRows];
-        duplicateItems = [...importOnly.duplicateItems, ...crossDuplicates];
-        duplicateCount = duplicateItems.length;
-        daftarWarga = processed;
-    } else {
+    if (mode !== '1' && mode !== '2') {
         showAlert('Pilihan tidak valid. Import dibatalkan.', 'Import Dibatalkan');
         return;
     }
 
-    // Nomor kupon dari file backup bisa bentrok di mode gabung —
-    // nomor yang dobel dilepas lalu diisi ulang sesudah nomor terbesar.
-    perbaikiNomorKuponDuplikat();
-    saveData();
-    const afterCount = daftarWarga.length;
-    const addedCount = Math.max(0, afterCount - (mode === '1' ? 0 : beforeCount));
-    const duplicatePreview = duplicateItems
-        .slice(0, 8)
-        .map((d, i) => `${i + 1}. ${d.nama} (RT ${d.rt})`)
-        .join('\n');
-    const duplicateTail = duplicateItems.length > 8
-        ? `\n... dan ${duplicateItems.length - 8} data duplikat lainnya.`
-        : '';
+    try {
+        const hasil = await QurbanStore.importWarga(importedRows, mode === '1' ? 'timpa' : 'gabung');
+        daftarWarga = await QurbanStore.muatSemua();
+        renderTable();
+        renderStats();
 
-    showAlert(
-        `Import selesai.\n` +
-        `Data valid di file: ${importedRows.length}\n` +
-        `Data ditambahkan: ${mode === '1' ? afterCount : addedCount}\n` +
-        `Duplikat dilewati: ${duplicateCount}` +
-        (duplicateCount > 0 ? `\n\nContoh duplikat:\n${duplicatePreview}${duplicateTail}` : ''),
-        'Ringkasan Import'
-    );
+        const duplicateCount = hasil.duplikat || 0;
+        const contohItems = hasil.contoh || [];
+        const duplicatePreview = contohItems
+            .slice(0, 8)
+            .map((d, i) => `${i + 1}. ${d.nama} (RT ${d.rt})`)
+            .join('\n');
+        const duplicateTail = duplicateCount > 8
+            ? `\n... dan ${duplicateCount - 8} data duplikat lainnya.`
+            : '';
+
+        showAlert(
+            `Import selesai.\n` +
+            `Data valid di file: ${hasil.valid}\n` +
+            `Data ditambahkan: ${hasil.ditambahkan}\n` +
+            `Duplikat dilewati: ${duplicateCount}` +
+            (duplicateCount > 0 ? `\n\nContoh duplikat:\n${duplicatePreview}${duplicateTail}` : ''),
+            'Ringkasan Import'
+        );
+    } catch (err) {
+        tampilkanGalatServer(err, 'Gagal mengimpor data ke Firestore.');
+    }
 }
 
 loadKuponLayout();

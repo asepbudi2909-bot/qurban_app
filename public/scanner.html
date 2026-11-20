@@ -4,6 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Scan QR Kupon Qurban AL-HIKMAH</title>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="assets/firebase-config.js"></script>
+<script src="assets/store.js"></script>
 <script src="assets/jsQR.min.js"></script>
 <link rel="stylesheet" href="assets/style.css">
 <style>
@@ -229,10 +233,11 @@
 </div>
 
 <script>
-const WARGA_KEY = 'qurbanWarga';
 const QR_PREFIX = 'QURBAN|';
-const GANTI_TUKAR_KEY = 'qurbanScanRequest';
 const COOLDOWN_MS = 2500;
+const WARGA_CACHE_MS = 15000;
+
+let cacheWarga = { data: null, waktu: 0 };
 
 let videoStream = null;
 let scanning = false;
@@ -258,18 +263,16 @@ function formatKupon(num) {
     return '#' + String(num || 0).padStart(3, '0');
 }
 
-function bacaWarga() {
-    try {
-        const parsed = JSON.parse(localStorage.getItem(WARGA_KEY) || '[]');
-        return Array.isArray(parsed) ? parsed : [];
-    } catch (err) {
-        return [];
-    }
+async function ambilWarga() {
+    const now = Date.now();
+    if (cacheWarga.data && now - cacheWarga.waktu < WARGA_CACHE_MS) return cacheWarga.data;
+    const daftar = await QurbanStore.muatSemua();
+    cacheWarga = { data: daftar, waktu: now };
+    return daftar;
 }
 
-function simpanWarga(daftar) {
-    localStorage.setItem(WARGA_KEY, JSON.stringify(daftar));
-    localStorage.setItem(GANTI_TUKAR_KEY, String(Date.now()));
+function batalkanCacheWarga() {
+    cacheWarga = { data: null, waktu: 0 };
 }
 
 function setStatus(message, jenis = '') {
@@ -307,8 +310,7 @@ function parseQrPayload(text) {
     return { noKupon: Number.isInteger(noKupon) ? noKupon : null, id };
 }
 
-function cariWargaDariPayload(payload) {
-    const daftar = bacaWarga();
+function cariWargaDariPayload(daftar, payload) {
     return daftar.find(w => payload.id && w.id === payload.id)
         || daftar.find(w => payload.noKupon !== null && w.noKupon === payload.noKupon)
         || null;
@@ -333,19 +335,21 @@ function renderHasil(warga) {
     `;
 }
 
-function tandaiTukar(id, nilaiTukar) {
-    const daftar = bacaWarga();
-    const warga = daftar.find(w => w.id === id);
-    if (!warga) {
-        setStatus('Data warga tidak ditemukan (data mungkin berubah).', 'err');
+async function tandaiTukar(id, nilaiTukar) {
+    const tombol = document.querySelector('#resultCard button[data-tandai-id]');
+    if (tombol) tombol.disabled = true;
+    let warga;
+    try {
+        warga = await QurbanStore.setTukar(id, nilaiTukar);
+    } catch (err) {
+        batalkanCacheWarga();
+        setStatus('Gagal menyimpan ke Firestore: ' + String(err?.message || err), 'err');
+        if (tombol) tombol.disabled = false;
         return;
     }
-    warga.sudahTukar = nilaiTukar;
-    simpanWarga(daftar);
+    batalkanCacheWarga();
     renderHasil(warga);
-    tambahLog(warga, nilaiTukar, (
-        (nilaiTukar ? 'Ditandai tukar' : 'Dibatalkan')
-    ));
+    tambahLog(warga, nilaiTukar, nilaiTukar ? 'Ditandai tukar' : 'Dibatalkan');
     setStatus(`${formatKupon(warga.noKupon)} — ${nilaiTukar ? 'ditandai sudah tukar' : 'tanda dibatalkan'}.`, 'ok');
 }
 
@@ -382,7 +386,7 @@ function tambahLogTidakDikenal(payloadText) {
     while (logEl.children.length > 15) logEl.lastChild.remove();
 }
 
-function prosesKode(text) {
+async function prosesKode(text) {
     const now = Date.now();
     const terakhir = lastDetections.get(text) || 0;
     if (now - terakhir < COOLDOWN_MS) return;
@@ -395,7 +399,15 @@ function prosesKode(text) {
         return;
     }
 
-    const warga = cariWargaDariPayload(payload);
+    let daftar;
+    try {
+        daftar = await ambilWarga();
+    } catch (err) {
+        setStatus('Gagal terhubung ke Firestore: ' + String(err?.message || err), 'err');
+        return;
+    }
+
+    const warga = cariWargaDariPayload(daftar, payload);
     if (!warga) {
         setStatus(`Kupon ${payload.noKupon !== null ? formatKupon(payload.noKupon) : ''} tidak ada dalam data.`, 'err');
         tambahLogTidakDikenal(text);
@@ -487,12 +499,18 @@ function gantiKamera() {
     mulaiKamera();
 }
 
-function cariManual() {
+async function cariManual() {
     const input = document.getElementById('manualInput');
     const nilai = input.value.trim().replace(/#/, '');
     if (!nilai) return;
     const noKupon = parseInt(nilai, 10);
-    const daftar = bacaWarga();
+    let daftar;
+    try {
+        daftar = await ambilWarga();
+    } catch (err) {
+        setStatus('Gagal terhubung ke Firestore: ' + String(err?.message || err), 'err');
+        return;
+    }
     const warga = daftar.find(w => w.noKupon === noKupon)
         || daftar.find(w => w.nama.toLowerCase().includes(nilai.toLowerCase()));
     input.value = '';
@@ -520,21 +538,18 @@ function itemLogManual(warga) {
     while (logEl.children.length > 15) logEl.lastChild.remove();
 }
 
-function cekDataKosong() {
-    if (!bacaWarga().length) {
-        setStatus('Data warga masih kosong. Tambah/import data di halaman Data Warga kiri.', 'err');
+async function cekDataKosong() {
+    if (!QurbanStore.konfigurasiLengkap()) {
+        setStatus(QurbanStore.pesananKonfigurasi(), 'err');
+        return;
+    }
+    try {
+        const daftar = await QurbanStore.muatSemua();
+        if (!daftar.length) setStatus('Data warga masih kosong. Tambah/import data di halaman Data Warga.', 'err');
+    } catch (err) {
+        setStatus('Gagal terhubung ke Firestore: ' + String(err?.message || err), 'err');
     }
 }
-
-window.addEventListener('storage', function(event) {
-    if (event.key === GANTI_TUKAR_KEY) {
-        const card = document.getElementById('resultCard');
-        const btn = card.querySelector('button[data-tandai-id]');
-        if (!btn) return;
-        const warga = bacaWarga().find(w => w.id === btn.dataset.tandaiId);
-        if (warga) renderHasil(warga);
-    }
-});
 
 document.addEventListener('keydown', function(event) {
     if (event.key === 'Escape') hentikanKamera();
