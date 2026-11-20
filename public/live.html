@@ -10,9 +10,14 @@
 <script src="assets/store.js?v=20261121"></script>
 <link rel="stylesheet" href="assets/style.css?v=20261121">
 <style>
+/* Halaman dikunci satu layar: hanya konten dalam panel yang bergulir */
+html, body { height: 100%; }
+body { overflow: hidden; }
+
 .container-live {
   display: grid;
   grid-template-columns: 1.4fr 1fr;
+  grid-template-rows: minmax(0, 1fr);
   gap: 0.9375rem;
   flex: 1;
   min-height: 0;
@@ -20,10 +25,10 @@
 }
 
 @media (max-width: 860px) {
-  .container-live { grid-template-columns: 1fr; overflow: visible; }
-  .container-live .panel { overflow: visible; }
-  .panel-papan { overflow-y: visible !important; }
-  .riwayat-list { max-height: 50vh; }
+  .container-live {
+    grid-template-columns: 1fr;
+    grid-template-rows: minmax(0, 1fr) minmax(0, 1fr);
+  }
 }
 
 .container-live .panel { min-height: 0; overflow: hidden; }
