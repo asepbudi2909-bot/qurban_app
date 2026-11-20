@@ -15,11 +15,20 @@
   grid-template-columns: 1.4fr 1fr;
   gap: 0.9375rem;
   flex: 1;
+  min-height: 0;
+  overflow: hidden;
 }
 
 @media (max-width: 860px) {
-  .container-live { grid-template-columns: 1fr; }
+  .container-live { grid-template-columns: 1fr; overflow: visible; }
+  .container-live .panel { overflow: visible; }
+  .panel-papan { overflow-y: visible !important; }
+  .riwayat-list { max-height: 50vh; }
 }
+
+.container-live .panel { min-height: 0; overflow: hidden; }
+
+.panel-papan { overflow-y: auto; }
 
 .live-grid {
   display: grid;
@@ -136,10 +145,24 @@
 .rt-kartu .l { font-size: 0.72em; color: #8aa196; }
 
 .riwayat-list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: 8px;
   margin-top: 10px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(52, 211, 153, 0.35) transparent;
+}
+
+.riwayat-list::-webkit-scrollbar { width: 8px; }
+
+.riwayat-list::-webkit-scrollbar-track { background: transparent; }
+
+.riwayat-list::-webkit-scrollbar-thumb {
+  background: rgba(52, 211, 153, 0.35);
+  border-radius: 4px;
 }
 
 .riwayat-item {
@@ -192,7 +215,7 @@
 </header>
 
 <div class="container-live">
-  <div class="panel">
+  <div class="panel panel-papan">
     <div class="panel-header" style="display:flex; justify-content:space-between; align-items:center;">
       <h2>Papan Counter</h2>
       <span class="status-live" id="statusLive">Menghubungkan...</span>
