@@ -1,4 +1,6 @@
-# Aplikasi Qurban Al-Hikmah
+# Aplikasi Qurban Al-Hikmah — Versi Firebase
+
+> **Ini branch `versi-firebase`.** Versi baru dengan backend Firebase, QR code, scan verifikasi, dan papan Live counter — sudah live di <https://qurban-app-f713c.web.app>.
 
 Aplikasi web untuk pengelolaan qurban Masjid Al-Hikmah — **frontend statis + backend & penyimpanan Firebase (Cloud Firestore)**:
 
@@ -34,7 +36,43 @@ firebase emulators:start
 
 > Emulator Firestore membutuhkan Java. Aktifkan dengan `firebase init firestore` bila diminta.
 
-## Setup Firebase (sekali)
+## Dua Versi Aplikasi
+
+| Branch | Versi | Penyimpanan | Catatan |
+| ------ | ----- | ----------- | ------- |
+| `master` | Versi awal | localStorage per perangkat | Dipertahankan apa adanya; **tidak** punya `firebase.json` — jangan jalankan deploy dari branch ini |
+| `versi-firebase` (_branch ini_) | Versi baru: QR + scan + Live | Cloud Firestore (terpusat) | Semua konfigurasi deploy ada di sini; sumber file yang ter-deploy |
+
+Jalankan `git checkout versi-firebase` dulu sebelum perintah deploy apa pun. Data localStorage versi lama otomatis ditawarkan untuk dimigrasikan saat halaman pertama kali dibuka dengan Firestore masih kosong.
+
+## Konfigurasi yang Sudah Terpasang
+
+| File | Isi | Status |
+| ---- | --- | ------ |
+| `.firebaserc` | Project default: `qurban-app-f713c` | siap, tidak perlu diubah |
+| `firebase.json` | Hosting dari folder `public/` + referensi rules + cache asset | siap |
+| `firestore.rules` | Aturan keamanan Firestore (saat ini terbuka untuk koleksi `warga`) | siap, bisa diperketat (lihat **Keamanan**) |
+| `public/assets/firebase-config.js` | `firebaseConfig` aplikasi web (apiKey, projectId, appId, dst.) | **sudah terisi** nilai project `qurban-app-f713c` |
+
+Tidak ada langkah setup lagi — config sudah lengkap dan aplikasi ter-deploy. Bagian bawah hanya relevan bila Anda memakai project lain.
+
+## Deploy Ulang (branch ini)
+
+```bash
+git checkout versi-firebase
+npm install -g firebase-tools
+firebase login                        # cukup sekali per komputer; TIDAK perlu CI token
+firebase deploy --only hosting,firestore:rules
+```
+
+Jika memakai project Firebase lain (bukan `qurban-app-f713c`):
+
+1. Buat project + aktifkan **Firestore Database** (Native mode) di [console.firebase.google.com](https://console.firebase.google.com).
+2. Daftarkan **aplikasi web** (ikon `</>`) lalu salin `firebaseConfig` ke `public/assets/firebase-config.js`.
+3. Pasang project pada repo: `firebase use --add` (pilih project, alias `default`).
+4. Deploy seperti di atas.
+
+## Setup Firebase (jika memakai project baru)
 
 1. Buat project di [console.firebase.google.com](https://console.firebase.google.com).
 2. **Build → Firestore Database → Create database** (mode Native).
@@ -42,17 +80,6 @@ firebase emulators:start
 4. Tempel nilainya ke `public/assets/firebase-config.js` (ganti semua `ISI_...`).
 5. Tambahkan domain deploy ke **Authentication → Settings → Authorized domains**:
    - `<project-id>.web.app` dan `<project-id>.firebaseapp.com` (biasanya sudah otomatis), serta domain kustom bila dipakai.
-
-## Deploy ke Firebase Hosting
-
-```bash
-npm install -g firebase-tools
-firebase login
-firebase use --add          # pilih project, alias "default"
-firebase deploy --only hosting,firestore:rules
-```
-
-Aplikasi terbit di `https://<project-id>.web.app`.
 
 ## Sumber Data (Firestore)
 
